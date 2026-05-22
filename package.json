@@ -13,7 +13,9 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "mcp": "ruler apply",
-    "mcp:revert": "ruler revert"
+    "mcp:revert": "ruler revert",
+    "build:backend": "tsc --project tsconfig.backend.json",
+    "start:backend": "node dist/backend/index.js"
   },
   "dependencies": {
     "@fontsource/roboto": "^5.2.9",

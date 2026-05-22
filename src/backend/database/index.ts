@@ -6,7 +6,7 @@ dotenv.config();
 
 async function ensureDatabaseExists() {
   const dbName = process.env.DB_DATABASE || "gestao_professores";
-  
+
   const client = new Client({
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT) || 5432,
@@ -22,14 +22,10 @@ async function ensureDatabaseExists() {
       "SELECT 1 FROM pg_database WHERE datname = $1",
       [dbName]
     );
-
     if (res.rowCount === 0) {
       await client.query(`CREATE DATABASE "${dbName}"`);
-      console.log(`✅ Banco de dados '${dbName}' criado com sucesso.`);
+      console.log(`✅ Banco '${dbName}' criado.`);
     }
-  } catch (error) {
-    console.error("⚠️ Erro ao verificar/criar banco de dados:", error);
-    throw error;
   } finally {
     await client.end();
   }
@@ -37,7 +33,10 @@ async function ensureDatabaseExists() {
 
 export const initializeDatabase = async () => {
   try {
-    await ensureDatabaseExists();
+    // Em produção o banco já existe, pula a criação
+    if (process.env.NODE_ENV !== "production") {
+      await ensureDatabaseExists();
+    }
     await AppDataSource.initialize();
     console.log("✅ Banco de dados conectado com sucesso!");
   } catch (error) {

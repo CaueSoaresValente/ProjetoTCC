@@ -1,4 +1,3 @@
-// src/backend/config/data-source.ts
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import dotenv from "dotenv";
@@ -20,34 +19,39 @@ import { TurmaUC } from "../modules/turma/turma-uc.entity.js";
 
 dotenv.config();
 
-export const AppDataSource = new DataSource({
-  type: "postgres",
-  host: process.env.DB_HOST!,
-  port: Number(process.env.DB_PORT!),
-  username: process.env.DB_USERNAME!,
-  password: process.env.DB_PASSWORD!,
-  database: process.env.DB_DATABASE!,
+const isProduction = process.env.NODE_ENV === "production";
 
-  synchronize: true, // true = TypeORM cria as tabelas automaticamente (APENAS em desenvolvimento!)
-  logging: process.env.NODE_ENV === "development",
-
-  entities: [
-    Cadastro,
-    Gestor,
-    OPP,
-    Professor,
-    UnidadeCurricular,
-    ProfessorUC,
-    ProfessorTurma,
-    Turma,
-    Disponibilidade,
-    Area,
-    ProfessorArea,
-    OPPArea,
-    Certificacao,
-    TurmaUC,
-  ],
-
-  migrations: ["src/backend/database/migrations/*.ts"],
-  subscribers: [],
-});
+export const AppDataSource = new DataSource(
+  isProduction
+    ? {
+        type: "postgres",
+        url: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+        synchronize: true,
+        logging: false,
+        entities: [
+          Cadastro, Gestor, OPP, Professor, UnidadeCurricular, ProfessorUC,
+          ProfessorTurma, Turma, Disponibilidade, Area, ProfessorArea,
+          OPPArea, Certificacao, TurmaUC,
+        ],
+        migrations: [],
+        subscribers: [],
+      }
+    : {
+        type: "postgres",
+        host: process.env.DB_HOST!,
+        port: Number(process.env.DB_PORT!),
+        username: process.env.DB_USERNAME!,
+        password: process.env.DB_PASSWORD!,
+        database: process.env.DB_DATABASE!,
+        synchronize: true,
+        logging: true,
+        entities: [
+          Cadastro, Gestor, OPP, Professor, UnidadeCurricular, ProfessorUC,
+          ProfessorTurma, Turma, Disponibilidade, Area, ProfessorArea,
+          OPPArea, Certificacao, TurmaUC,
+        ],
+        migrations: ["src/backend/database/migrations/*.ts"],
+        subscribers: [],
+      }
+);
