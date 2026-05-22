@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    /* --- Adicionado para o TypeORM --- */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
+    "rootDir": "./src/backend",
+    "outDir": "./dist/backend",
+    "lib": ["esnext"],
+    /* --------------------------------- */
+
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "esnext",
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true
+  },
+  "include": ["src/backend/**/*"]
+}
