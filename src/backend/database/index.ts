@@ -1,11 +1,11 @@
 import { AppDataSource, isNeon } from "../config/data-source.js";
 import { Client } from "pg";
-import dotenv from "dotenv";
 import { Cadastro } from "../modules/cadastro/cadastro.entity.js";
 import { Gestor } from "../modules/gestor/gestor.entity.js";
 import * as bcrypt from "bcryptjs";
 
-dotenv.config();
+// dotenv.config() removido — na Vercel as variáveis vêm do dashboard.
+// Em dev local, o dotenv é carregado pelo app.ts antes de importar este módulo.
 
 async function ensureDatabaseExists() {
   const dbName = process.env.DB_DATABASE || "gestao_professores";
@@ -40,11 +40,14 @@ async function seedDefaultGestor() {
 
   // Busca o gestor especificamente pelo email principal
   let adminUser = await cadastroRepo.findOne({ where: { email: "admin@senai.br" } });
-  
-  const salt = await bcrypt.genSalt(12);
-  const hashedPassword = await bcrypt.hash("Admin@123", salt);
 
   if (!adminUser) {
+    // Só cria o gestor padrão se ele NÃO existir.
+    // Não redefinimos mais a senha a cada cold start para não sobrescrever
+    // alterações feitas pelos usuários.
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash("Admin@123", salt);
+
     console.log("🌱 Criando gestor padrão...");
     const cadastroGestor = cadastroRepo.create({
       email: "admin@senai.br",
@@ -66,11 +69,7 @@ async function seedDefaultGestor() {
     console.log("   E-mail: admin@senai.br");
     console.log("   Senha: Admin@123");
   } else {
-    // Se o gestor já existe, garantimos que a senha padrão foi resetada para 'Admin@123'
-    console.log("ℹ️ Gestor padrão já existe. Redefinindo senha para garantir acesso...");
-    adminUser.senha = hashedPassword;
-    adminUser.funcao = "gestor";
-    await cadastroRepo.save(adminUser);
+    console.log("ℹ️ Gestor padrão já existe — senha preservada.");
 
     // Garante que existe o registro de gestor correspondente
     const gestorRecord = await gestorRepo.findOne({ where: { idCadastro: adminUser.idUsuario } });
@@ -81,7 +80,6 @@ async function seedDefaultGestor() {
       });
       await gestorRepo.save(novoGestor);
     }
-    console.log("✅ Senha do gestor padrão redefinida para: Admin@123");
   }
 }
 
@@ -100,8 +98,11 @@ export const initializeDatabase = async () => {
   } catch (error) {
     console.error("❌ Erro ao conectar no banco:", error);
     if (isNeon) {
-      console.error("💡 Dica: Verifique se DATABASE_URL no .env está correta e inclui ?sslmode=require");
+      console.error("💡 Dica: Verifique se DATABASE_URL está configurada nas Environment Variables da Vercel.");
     }
-    process.exit(1);
+    // NÃO usar process.exit(1) em serverless functions!
+    // Lançamos o erro para que a requisição retorne HTTP 500 graciosamente,
+    // sem matar a instância inteira.
+    throw error;
   }
 };

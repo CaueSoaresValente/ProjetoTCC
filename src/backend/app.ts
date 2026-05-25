@@ -30,7 +30,12 @@ import { PerfilController } from './modules/perfil/perfil.controller.js';
 import { TurmaController } from './modules/turma/turma.controller.js';
 import { CalendarioController } from './modules/professor/calendario.controller.js';
 
-dotenv.config();
+// Em dev local, carrega as variáveis do arquivo .env.
+// Na Vercel, as variáveis vêm do dashboard (Settings > Environment Variables),
+// e o arquivo .env não é deployado.
+if (!process.env.VERCEL) {
+  dotenv.config();
+}
 
 const app = express();
 

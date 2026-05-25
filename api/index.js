@@ -16,9 +16,20 @@ import { initializeDatabase } from '../dist/backend/database/index.js';
 let initialized = false;
 
 export default async function handler(req, res) {
-  if (!initialized) {
-    await initializeDatabase();
-    initialized = true;
+  try {
+    if (!initialized) {
+      await initializeDatabase();
+      initialized = true;
+    }
+    return app(req, res);
+  } catch (error) {
+    console.error('❌ Erro na serverless function:', error);
+    // Reseta o flag para tentar reconectar na próxima requisição
+    initialized = false;
+    return res.status(500).json({
+      message: 'Erro interno do servidor. Verifique os logs da Vercel.',
+      error: process.env.NODE_ENV !== 'production' ? error.message : undefined,
+    });
   }
-  return app(req, res);
 }
+
