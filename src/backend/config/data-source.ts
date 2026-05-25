@@ -21,7 +21,11 @@ import { OPPArea } from "../modules/area/opp-area.entity.js";
 import { Certificacao } from "../modules/professor/certificacao.entity.js";
 import { TurmaUC } from "../modules/turma/turma-uc.entity.js";
 
-dotenv.config();
+// Em dev local, carrega as variáveis do arquivo .env.
+// Na Vercel, as variáveis vêm do dashboard (Settings > Environment Variables).
+if (!process.env.VERCEL) {
+  dotenv.config();
+}
 
 const isProduction = process.env.NODE_ENV === "production";
 const isVercel = !!process.env.VERCEL;
