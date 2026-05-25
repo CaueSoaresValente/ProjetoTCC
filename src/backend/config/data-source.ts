@@ -25,7 +25,7 @@ export const AppDataSource = new DataSource(
   isProduction
     ? {
         type: "postgres",
-        url: process.env.DATABASE_URL,
+        url: process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL || process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false },
         synchronize: true,
         logging: false,
@@ -36,6 +36,8 @@ export const AppDataSource = new DataSource(
         ],
         migrations: [],
         subscribers: [],
+        // Limita o pool de conexões para ambiente serverless (Vercel)
+        extra: { max: 3 },
       }
     : {
         type: "postgres",

@@ -22,9 +22,9 @@ const USER_KEY = 'usuario';
 // FUNÇÃO BASE — todas as outras usam esta
 // ============================================================
 async function request(url: string, options: RequestInit = {}) {
-  // Força a porta 3001 do backend
-  const baseUrl = 'http://localhost:3001';
-  const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+  // Em dev, o Vite proxy redireciona /api/* para localhost:3001.
+  // Em produção (Vercel), frontend e backend estão no mesmo domínio.
+  const fullUrl = url;
   
   const token = localStorage.getItem(TOKEN_KEY);
 

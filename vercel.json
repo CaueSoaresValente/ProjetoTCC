@@ -1,0 +1,14 @@
+{
+  "buildCommand": "npm run build:backend && npm run build-only",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 10,
+      "includeFiles": "dist/backend/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
