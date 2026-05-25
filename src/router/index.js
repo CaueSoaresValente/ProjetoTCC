@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import Login from "@/pages/login/login";
-import Cadastro from "@/pages/login/Cadastro.vue";
 import TelaInput from "@/pages/login/TelaInput.vue";
 import Findprofessor from "@/pages/gestaoProfessores/Findprofessor.vue";
 import Turmas from "@/pages/turmas/turmas.vue";
@@ -27,11 +26,6 @@ const routes = [
     path: "/login",
     name: "login",
     component: Login,
-  },
-  {
-     path: "/cadastro",
-     name: "cadastro",
-     component: Cadastro,
   },
   {
      path: "/findprofessor",

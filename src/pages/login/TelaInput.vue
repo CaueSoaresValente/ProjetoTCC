@@ -20,29 +20,29 @@ import Menu from "@/components/Menu.vue";
             >
               Login
             </li>
-            <li
-              class="hidden md:flex font-bold relative -bottom-2"
-              @click="$router.push('/cadastro')"
-            >
-              Cadastre-se
-            </li>
           </ul>
         </nav>
       </div>
     </header>
 
-    <section>
-      <div class="md:flex justify-center">
-        <img src="../../assets/imgmulher.png" class="hidden md:flex h-170" />
-        <div class="h-150 flex flex-col justify-center gap-3">
+    <section class="py-6">
+      <div class="container mx-auto px-6 md:flex justify-center items-center gap-12">
+        <img 
+          src="../../assets/education_dashboard.png" 
+          class="hidden md:flex max-h-[500px] w-auto object-contain rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 transition-all duration-500 hover:scale-[1.02]" 
+          alt="Painel de Gestão"
+        />
+        <div class="h-auto flex flex-col justify-center gap-4 max-w-xl">
           <LoginMobile />
 
-          <span class="font-bold hidden md:flex text-6xl">Bem-vindo, </span>
-          <p class="hidden md:flex text-5xl">
-            ao Sistema de gestão de Professores
+          <span class="font-black hidden md:flex text-6xl text-gray-800 dark:text-gray-100 tracking-tight leading-none">
+            Bem-vindo,
+          </span>
+          <p class="hidden md:flex text-4xl font-light text-gray-600 dark:text-gray-300 leading-tight">
+            ao Sistema de Gestão de Professores
           </p>
           <p
-            class="text-center md:text-left text-gray-700 dark:text-gray-300 text-base md:text-lg leading-relaxed hidden md:block"
+            class="text-center md:text-left text-gray-500 dark:text-gray-400 text-base md:text-lg leading-relaxed hidden md:block"
           >
             Faça
             <router-link
@@ -50,13 +50,6 @@ import Menu from "@/components/Menu.vue";
               class="text-red-600 font-semibold hover:underline decoration-2 underline-offset-4 mx-1 transition-all"
             >
               login
-            </router-link>
-            ou
-            <router-link
-              to="/cadastro"
-              class="text-red-600 font-semibold hover:underline decoration-2 underline-offset-4 mx-1 transition-all"
-            >
-              cadastre-se
             </router-link>
             para obter acesso à página.
           </p>
