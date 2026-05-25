@@ -10,8 +10,8 @@
 // ============================================================
 
 import 'reflect-metadata';
-import app from '../dist/backend/app.js';
-import { initializeDatabase } from '../dist/backend/database/index.js';
+import app from '../dist-backend/app.js';
+import { initializeDatabase } from '../dist-backend/database/index.js';
 
 let initialized = false;
 

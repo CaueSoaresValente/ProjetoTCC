@@ -5,7 +5,7 @@
     "emitDecoratorMetadata": true,
     "strictPropertyInitialization": false,
     "rootDir": "./src/backend",
-    "outDir": "./dist/backend",
+    "outDir": "./dist-backend",
     "lib": ["esnext"],
     /* --------------------------------- */
 

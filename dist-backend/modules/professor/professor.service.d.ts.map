@@ -1,0 +1,1 @@
+{"version":3,"file":"professor.service.d.ts","sourceRoot":"","sources":["../../../src/backend/modules/professor/professor.service.ts"],"names":[],"mappings":"AASA,qBAAa,gBAAgB;IAC3B,OAAO,CAAC,IAAI,CAA6B;IAGnC,QAAQ,CAAC,EAAE,EAAE,MAAM;IAKnB,cAAc,CAAC,UAAU,EAAE,MAAM;IAKjC,MAAM,CAAC,IAAI,EAAE,GAAG;CAGvB"}

@@ -1,0 +1,1 @@
+{"version":3,"file":"calendario.controller.d.ts","sourceRoot":"","sources":["../../../src/backend/modules/professor/calendario.controller.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAC;AAG5C,qBAAa,oBAAoB;IAC/B,OAAO,CAAC,OAAO,CAA2B;IAEpC,aAAa,CAAC,GAAG,EAAE,OAAO,EAAE,GAAG,EAAE,QAAQ;CAahD"}
