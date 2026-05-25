@@ -1,4 +1,4 @@
-import { AppDataSource } from "../config/data-source.js";
+import { AppDataSource, isNeon } from "../config/data-source.js";
 import { Client } from "pg";
 import dotenv from "dotenv";
 import { Cadastro } from "../modules/cadastro/cadastro.entity.js";
@@ -70,15 +70,21 @@ async function seedDefaultGestor() {
 
 export const initializeDatabase = async () => {
   try {
-    // Em produção o banco já existe, pula a criação
-    if (process.env.NODE_ENV !== "production") {
+    if (isNeon) {
+      console.log("☁️  Modo Neon detectado — conectando ao banco na nuvem...");
+    } else if (process.env.NODE_ENV !== "production") {
+      // Só tenta criar o banco localmente (não funciona com Neon)
       await ensureDatabaseExists();
     }
+
     await AppDataSource.initialize();
     console.log("✅ Banco de dados conectado com sucesso!");
     await seedDefaultGestor();
   } catch (error) {
     console.error("❌ Erro ao conectar no banco:", error);
+    if (isNeon) {
+      console.error("💡 Dica: Verifique se DATABASE_URL no .env está correta e inclui ?sslmode=require");
+    }
     process.exit(1);
   }
-};
+};

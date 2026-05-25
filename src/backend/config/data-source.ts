@@ -1,6 +1,10 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import dotenv from "dotenv";
+import * as neon from "@neondatabase/serverless";
+import ws from "ws";
+
+neon.neonConfig.webSocketConstructor = ws;
 
 import { Cadastro } from "../modules/cadastro/cadastro.entity.js";
 import { Gestor } from "../modules/gestor/gestor.entity.js";
@@ -21,39 +25,47 @@ dotenv.config();
 
 const isProduction = process.env.NODE_ENV === "production";
 
-export const AppDataSource = new DataSource(
-  isProduction
-    ? {
-        type: "postgres",
-        url: process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL || process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-        synchronize: true,
-        logging: false,
-        entities: [
-          Cadastro, Gestor, OPP, Professor, UnidadeCurricular, ProfessorUC,
-          ProfessorTurma, Turma, Disponibilidade, Area, ProfessorArea,
-          OPPArea, Certificacao, TurmaUC,
-        ],
-        migrations: [],
-        subscribers: [],
-        // Limita o pool de conexões para ambiente serverless (Vercel)
-        extra: { max: 3 },
-      }
-    : {
-        type: "postgres",
-        host: process.env.DB_HOST!,
-        port: Number(process.env.DB_PORT!),
-        username: process.env.DB_USERNAME!,
-        password: process.env.DB_PASSWORD!,
-        database: process.env.DB_DATABASE!,
-        synchronize: true,
-        logging: true,
-        entities: [
-          Cadastro, Gestor, OPP, Professor, UnidadeCurricular, ProfessorUC,
-          ProfessorTurma, Turma, Disponibilidade, Area, ProfessorArea,
-          OPPArea, Certificacao, TurmaUC,
-        ],
-        migrations: ["src/backend/database/migrations/*.ts"],
-        subscribers: [],
-      }
-);
+// Detecta se estamos usando Neon (DATABASE_URL ou POSTGRES_URL presente)
+const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL;
+const isNeon = !!databaseUrl;
+
+const entities = [
+  Cadastro, Gestor, OPP, Professor, UnidadeCurricular, ProfessorUC,
+  ProfessorTurma, Turma, Disponibilidade, Area, ProfessorArea,
+  OPPArea, Certificacao, TurmaUC,
+];
+
+// Configuração base que funciona tanto com Neon (dev/prod) quanto PostgreSQL local
+const dataSourceConfig = databaseUrl
+  ? {
+      // Conexão via URL (Neon — tanto em dev quanto em produção)
+      type: "postgres" as const,
+      driver: neon,
+      url: databaseUrl,
+      ssl: { rejectUnauthorized: false },
+      synchronize: true,
+      logging: !isProduction,
+      entities,
+      migrations: [],
+      subscribers: [],
+      extra: { max: isProduction ? 3 : 10 },
+    }
+  : {
+      // Conexão via host/port (PostgreSQL local)
+      type: "postgres" as const,
+      host: process.env.DB_HOST!,
+      port: Number(process.env.DB_PORT!) || 5432,
+      username: process.env.DB_USERNAME!,
+      password: process.env.DB_PASSWORD!,
+      database: process.env.DB_DATABASE!,
+      synchronize: true,
+      logging: true,
+      entities,
+      migrations: ["src/backend/database/migrations/*.ts"],
+      subscribers: [],
+    };
+
+export const AppDataSource = new DataSource(dataSourceConfig);
+
+// Exporta flag para outros módulos saberem se estamos usando Neon
+export { isNeon };
