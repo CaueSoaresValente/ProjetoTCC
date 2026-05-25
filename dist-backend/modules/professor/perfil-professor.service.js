@@ -90,7 +90,7 @@ export class PerfilProfessorService {
                 dataInicio: pt.turma?.dataInicio,
                 dataTermino: pt.turma?.dataTermino,
                 // Dias e períodos da turma (para montar o calendário)
-                horarios: pt.turma?.turmaUCs?.map(tuc => ({
+                horarios: pt.turma?.turmaUCs?.map((tuc) => ({
                     diaSemana: tuc.diaSemana,
                     periodo: tuc.periodo,
                     uc: tuc.unidadeCurricular?.nome || '',

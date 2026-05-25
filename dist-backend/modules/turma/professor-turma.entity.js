@@ -44,7 +44,7 @@ __decorate([
 __decorate([
     ManyToOne(() => Turma, (turma) => turma.professorTurmas, { nullable: false, onDelete: 'CASCADE' }),
     JoinColumn({ name: 'id_turma' }),
-    __metadata("design:type", Turma)
+    __metadata("design:type", Object)
 ], ProfessorTurma.prototype, "turma", void 0);
 __decorate([
     ManyToOne(() => Professor, (professor) => professor.professorTurmas, { nullable: false, onDelete: 'CASCADE' }),

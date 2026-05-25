@@ -23,7 +23,7 @@ export class ProfessorTurma {
 
   @ManyToOne(() => Turma, (turma) => turma.professorTurmas, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_turma' })
-  turma: Turma;
+  turma: any;
 
   @ManyToOne(() => Professor, (professor) => professor.professorTurmas, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_professor' })

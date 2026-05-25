@@ -42,7 +42,7 @@ __decorate([
 __decorate([
     ManyToOne(() => Turma, (turma) => turma.turmaUCs, { onDelete: 'CASCADE' }),
     JoinColumn({ name: 'id_turma' }),
-    __metadata("design:type", Turma)
+    __metadata("design:type", Object)
 ], TurmaUC.prototype, "turma", void 0);
 __decorate([
     ManyToOne(() => UnidadeCurricular, (uc) => uc.turmaUCs, { onDelete: 'CASCADE' }),

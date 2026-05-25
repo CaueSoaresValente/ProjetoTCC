@@ -41,16 +41,12 @@ export declare class PerfilProfessorService {
             periodo: string;
         }[];
         turmas: {
-            idTurma: number;
-            nome: string;
-            tipoCurso: string;
-            dataInicio: Date;
-            dataTermino: Date;
-            horarios: {
-                diaSemana: string;
-                periodo: string;
-                uc: string;
-            }[];
+            idTurma: any;
+            nome: any;
+            tipoCurso: any;
+            dataInicio: any;
+            dataTermino: any;
+            horarios: any;
         }[];
     } | null>;
     private calcularOcupacao;
