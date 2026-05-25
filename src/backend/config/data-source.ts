@@ -24,6 +24,7 @@ import { TurmaUC } from "../modules/turma/turma-uc.entity.js";
 dotenv.config();
 
 const isProduction = process.env.NODE_ENV === "production";
+const isVercel = !!process.env.VERCEL;
 
 // Detecta se estamos usando Neon (DATABASE_URL ou POSTGRES_URL presente)
 const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL;
@@ -40,7 +41,7 @@ const dataSourceConfig = databaseUrl
   ? {
       // Conexão via URL (Neon — tanto em dev quanto em produção)
       type: "postgres" as const,
-      driver: neon,
+      ...(isVercel ? {} : { driver: neon }),
       url: databaseUrl,
       ssl: { rejectUnauthorized: false },
       synchronize: true,
