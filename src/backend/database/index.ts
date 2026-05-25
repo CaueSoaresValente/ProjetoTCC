@@ -38,16 +38,17 @@ async function seedDefaultGestor() {
   const cadastroRepo = AppDataSource.getRepository(Cadastro);
   const gestorRepo = AppDataSource.getRepository(Gestor);
 
-  // Busca o gestor especificamente pelo email principal
-  let adminUser = await cadastroRepo.findOne({ where: { email: "admin@senai.br" } });
+  // Busca o gestor especificamente pelo email principal incluindo o campo senha (que tem select: false)
+  let adminUser = await cadastroRepo
+    .createQueryBuilder("cadastro")
+    .addSelect("cadastro.senha")
+    .where("cadastro.email = :email", { email: "admin@senai.br" })
+    .getOne();
+
+  const salt = await bcrypt.genSalt(12);
+  const hashedPassword = await bcrypt.hash("Admin@123", salt);
 
   if (!adminUser) {
-    // Só cria o gestor padrão se ele NÃO existir.
-    // Não redefinimos mais a senha a cada cold start para não sobrescrever
-    // alterações feitas pelos usuários.
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash("Admin@123", salt);
-
     console.log("🌱 Criando gestor padrão...");
     const cadastroGestor = cadastroRepo.create({
       email: "admin@senai.br",
@@ -69,7 +70,18 @@ async function seedDefaultGestor() {
     console.log("   E-mail: admin@senai.br");
     console.log("   Senha: Admin@123");
   } else {
-    console.log("ℹ️ Gestor padrão já existe — senha preservada.");
+    // Verifica se a senha salva confere com a padrão Admin@123
+    const isSenhaPadrao = await bcrypt.compare("Admin@123", adminUser.senha);
+    if (!isSenhaPadrao) {
+      console.log("ℹ️ Gestor padrão já existe, mas a senha é diferente de Admin@123. Redefinindo para garantir acesso...");
+      adminUser.senha = hashedPassword;
+      adminUser.funcao = "gestor";
+      adminUser.status = true; // Garante que está ativo
+      await cadastroRepo.save(adminUser);
+      console.log("✅ Senha do gestor padrão redefinida com sucesso!");
+    } else {
+      console.log("ℹ️ Gestor padrão já existe com a senha padrão ou alterada correta.");
+    }
 
     // Garante que existe o registro de gestor correspondente
     const gestorRecord = await gestorRepo.findOne({ where: { idCadastro: adminUser.idUsuario } });
