@@ -38,12 +38,14 @@ async function seedDefaultGestor() {
   const cadastroRepo = AppDataSource.getRepository(Cadastro);
   const gestorRepo = AppDataSource.getRepository(Gestor);
 
-  const gestorExist = await cadastroRepo.findOne({ where: { funcao: "gestor" } });
-  if (!gestorExist) {
-    console.log("🌱 Criando gestor padrão...");
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash("Admin@123", salt);
+  // Busca o gestor especificamente pelo email principal
+  let adminUser = await cadastroRepo.findOne({ where: { email: "admin@senai.br" } });
+  
+  const salt = await bcrypt.genSalt(12);
+  const hashedPassword = await bcrypt.hash("Admin@123", salt);
 
+  if (!adminUser) {
+    console.log("🌱 Criando gestor padrão...");
     const cadastroGestor = cadastroRepo.create({
       email: "admin@senai.br",
       senha: hashedPassword,
@@ -64,7 +66,22 @@ async function seedDefaultGestor() {
     console.log("   E-mail: admin@senai.br");
     console.log("   Senha: Admin@123");
   } else {
-    console.log("ℹ️ Gestor padrão já existe no banco de dados.");
+    // Se o gestor já existe, garantimos que a senha padrão foi resetada para 'Admin@123'
+    console.log("ℹ️ Gestor padrão já existe. Redefinindo senha para garantir acesso...");
+    adminUser.senha = hashedPassword;
+    adminUser.funcao = "gestor";
+    await cadastroRepo.save(adminUser);
+
+    // Garante que existe o registro de gestor correspondente
+    const gestorRecord = await gestorRepo.findOne({ where: { idCadastro: adminUser.idUsuario } });
+    if (!gestorRecord) {
+      const novoGestor = gestorRepo.create({
+        idCadastro: adminUser.idUsuario,
+        status: true,
+      });
+      await gestorRepo.save(novoGestor);
+    }
+    console.log("✅ Senha do gestor padrão redefinida para: Admin@123");
   }
 }
 
@@ -87,4 +104,4 @@ export const initializeDatabase = async () => {
     }
     process.exit(1);
   }
-};
+};
