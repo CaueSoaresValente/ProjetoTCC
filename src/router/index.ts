@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 
-import Login from "@/pages/login/login";
+import Login from "@/pages/login/login.vue";
 import TelaInput from "@/pages/login/TelaInput.vue";
 import Findprofessor from "@/pages/gestaoProfessores/Findprofessor.vue";
 import Turmas from "@/pages/turmas/turmas.vue";

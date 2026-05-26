@@ -4,9 +4,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Unique } from 'typeorm';
 import { Professor } from '../professor/professor.entity.js';
 import { Turma } from './turma.entity.js';
@@ -22,39 +19,31 @@ let ProfessorTurma = class ProfessorTurma {
     turmaUC;
 };
 __decorate([
-    PrimaryGeneratedColumn({ name: 'id_professor_turma' }),
-    __metadata("design:type", Number)
+    PrimaryGeneratedColumn({ name: 'id_professor_turma' })
 ], ProfessorTurma.prototype, "idProfessorTurma", void 0);
 __decorate([
-    Column({ name: 'id_turma', type: 'int' }),
-    __metadata("design:type", Number)
+    Column({ name: 'id_turma', type: 'int' })
 ], ProfessorTurma.prototype, "idTurma", void 0);
 __decorate([
-    Column({ name: 'id_professor', type: 'int' }),
-    __metadata("design:type", Number)
+    Column({ name: 'id_professor', type: 'int' })
 ], ProfessorTurma.prototype, "idProfessor", void 0);
 __decorate([
-    Column({ name: 'id_turma_uc', type: 'int', nullable: true }),
-    __metadata("design:type", Object)
+    Column({ name: 'id_turma_uc', type: 'int', nullable: true })
 ], ProfessorTurma.prototype, "idTurmaUC", void 0);
 __decorate([
-    Column({ type: 'boolean', default: true }),
-    __metadata("design:type", Boolean)
+    Column({ type: 'boolean', default: true })
 ], ProfessorTurma.prototype, "status", void 0);
 __decorate([
     ManyToOne(() => Turma, (turma) => turma.professorTurmas, { nullable: false, onDelete: 'CASCADE' }),
-    JoinColumn({ name: 'id_turma' }),
-    __metadata("design:type", Object)
+    JoinColumn({ name: 'id_turma' })
 ], ProfessorTurma.prototype, "turma", void 0);
 __decorate([
     ManyToOne(() => Professor, (professor) => professor.professorTurmas, { nullable: false, onDelete: 'CASCADE' }),
-    JoinColumn({ name: 'id_professor' }),
-    __metadata("design:type", Professor)
+    JoinColumn({ name: 'id_professor' })
 ], ProfessorTurma.prototype, "professor", void 0);
 __decorate([
     ManyToOne(() => TurmaUC, { nullable: true, onDelete: 'CASCADE' }),
-    JoinColumn({ name: 'id_turma_uc' }),
-    __metadata("design:type", Object)
+    JoinColumn({ name: 'id_turma_uc' })
 ], ProfessorTurma.prototype, "turmaUC", void 0);
 ProfessorTurma = __decorate([
     Entity('professor_turma'),

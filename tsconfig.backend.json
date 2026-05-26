@@ -2,7 +2,7 @@
   "compilerOptions": {
     /* --- Adicionado para o TypeORM --- */
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
+    "emitDecoratorMetadata": false,
     "strictPropertyInitialization": false,
     "rootDir": "./src/backend",
     "outDir": "./dist-backend",

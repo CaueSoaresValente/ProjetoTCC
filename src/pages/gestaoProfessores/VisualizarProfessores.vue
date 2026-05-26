@@ -181,11 +181,18 @@ const formatarData = (data: string | null) => {
 // Gera iniciais do nome para o avatar
 const getIniciais = (nome: string) => {
   if (!nome) return "?";
-  const partes = nome.split(" ");
-  if (partes.length >= 2) {
-    return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+  const partes = nome.trim().split(/\s+/);
+  const primeiro = partes[0];
+  const ultimo = partes[partes.length - 1];
+  if (primeiro && ultimo && partes.length >= 2) {
+    const pChar = primeiro[0];
+    const uChar = ultimo[0];
+    if (pChar && uChar) {
+      return (pChar + uChar).toUpperCase();
+    }
   }
-  return nome[0].toUpperCase();
+  const char = nome.trim()[0];
+  return char ? char.toUpperCase() : "?";
 };
 </script>
 

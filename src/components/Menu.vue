@@ -144,7 +144,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { getUsuarioLogado, logout } from "@/services/api";
@@ -168,7 +168,7 @@ const inicialNome = computed(() => {
 });
 
 const funcaoColor = computed(() => {
-  const colors = {
+  const colors: Record<string, string> = {
     gestor: "from-red-600 to-red-500",
     opp: "from-blue-600 to-blue-500",
     professor: "from-green-600 to-green-500",
