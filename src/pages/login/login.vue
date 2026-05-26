@@ -135,7 +135,7 @@ async function handleRecovery() {
   <div>
     <Menu />
 
-    <div class="flex items-center justify-center">
+    <div class="flex items-center justify-center pt-32 pb-16">
       <div
         class="flex flex-col space-y-3 bg-gray-100 p-8 dark:bg-[#121212] w-150 rounded-lg shadow-lg h-auto m-5"
       >
@@ -193,15 +193,7 @@ async function handleRecovery() {
           </div>
         </form>
 
-        <p class="text-center">
-          Não tem conta?
-          <router-link
-            to="/cadastro"
-            class="text-red-600 font-semibold hover:underline"
-          >
-            Cadastre-se
-          </router-link>
-        </p>
+
       </div>
 
       <v-dialog v-model="recoveryDialog" max-width="400">

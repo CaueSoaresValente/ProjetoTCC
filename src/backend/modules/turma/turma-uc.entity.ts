@@ -22,7 +22,7 @@ export class TurmaUC {
 
   @ManyToOne(() => Turma, (turma) => turma.turmaUCs, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_turma' })
-  turma: Turma;
+  turma: any;
 
   @ManyToOne(() => UnidadeCurricular, (uc) => uc.turmaUCs, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_uc' })

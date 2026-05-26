@@ -1,0 +1,160 @@
+import { CadastroRepository } from './cadastro.repository.js';
+import { Cadastro } from './cadastro.entity.js';
+import { AppDataSource } from '../../config/data-source.js';
+import { OPP } from '../opp/opp.entity.js';
+import { OPPArea } from '../area/opp-area.entity.js';
+import { Gestor } from '../gestor/gestor.entity.js';
+import { Professor } from '../professor/professor.entity.js';
+export class CadastroService {
+    repo = new CadastroRepository();
+    async create(data) {
+        // Verifica se já existe um cadastro ativo com o mesmo email
+        const todos = await this.repo.listAll();
+        const duplicado = todos.find((u) => u.email === data.email);
+        if (duplicado) {
+            throw new Error("Já existe um cadastro com este e-mail.");
+        }
+        // Separa as áreas do payload antes de criar o cadastro
+        const areas = data.areas || [];
+        delete data.areas;
+        if (data.senha) {
+            data.senha = await this.repo.hashPassword(data.senha);
+        }
+        const cadastro = await this.repo.create(data);
+        if (cadastro) {
+            // Cria o registro na tabela específica da função
+            if (data.funcao === 'opp') {
+                await this.criarOppComAreas(cadastro.idUsuario, areas);
+            }
+            else if (data.funcao === 'gestor') {
+                await this.garantirGestor(cadastro.idUsuario);
+            }
+            else if (data.funcao === 'professor') {
+                await this.garantirProfessor(cadastro.idUsuario);
+            }
+        }
+        return cadastro;
+    }
+    async findById(id) {
+        return await this.repo.findById(id);
+    }
+    async listAll() {
+        const cadastros = await this.repo.listAll();
+        // Para cada cadastro OPP, busca as áreas vinculadas
+        const oppRepo = AppDataSource.getRepository(OPP);
+        const resultado = [];
+        for (const cadastro of cadastros) {
+            if (cadastro.funcao === 'opp') {
+                // Busca o OPP deste cadastro com suas áreas
+                const opp = await oppRepo.findOne({
+                    where: { idCadastro: cadastro.idUsuario },
+                    relations: ['oppAreas', 'oppAreas.area'],
+                });
+                const nomesDasAreas = opp?.oppAreas
+                    ?.map((oa) => oa.area?.nome)
+                    .filter(Boolean) || [];
+                resultado.push({
+                    ...cadastro,
+                    areas: nomesDasAreas,
+                });
+            }
+            else {
+                resultado.push({ ...cadastro, areas: [] });
+            }
+        }
+        return resultado;
+    }
+    async update(id, data) {
+        // Separa as áreas do payload
+        const areas = data.areas || [];
+        delete data.areas;
+        const result = await this.repo.update(id, data);
+        // Se for OPP, atualiza as áreas vinculadas
+        if (data.funcao === 'opp') {
+            await this.atualizarAreasOpp(id, areas);
+        }
+        return result;
+    }
+    async delete(id) {
+        return await this.repo.delete(id);
+    }
+    // ====================== MÉTODOS AUXILIARES ======================
+    async garantirGestor(idCadastro) {
+        const gestorRepo = AppDataSource.getRepository(Gestor);
+        const existe = await gestorRepo.findOne({ where: { idCadastro } });
+        if (!existe) {
+            const novo = gestorRepo.create({ idCadastro, status: true });
+            await gestorRepo.save(novo);
+            console.log(`✅ Registro de Gestor criado para cadastro=${idCadastro}`);
+        }
+    }
+    async garantirProfessor(idCadastro) {
+        const profRepo = AppDataSource.getRepository(Professor);
+        const existe = await profRepo.findOne({ where: { idCadastro } });
+        if (!existe) {
+            const novo = profRepo.create({ idCadastro, status: true });
+            await profRepo.save(novo);
+            console.log(`✅ Registro de Professor criado para cadastro=${idCadastro}`);
+        }
+    }
+    async criarOppComAreas(idCadastro, areas) {
+        const oppRepo = AppDataSource.getRepository(OPP);
+        const gestorRepo = AppDataSource.getRepository(Gestor);
+        // Busca o primeiro gestor ativo para vincular ao OPP
+        let gestor = await gestorRepo.findOne({ where: { status: true } });
+        // Se não houver gestor na tabela gestor, tenta achar um cadastro gestor e criar o registro
+        if (!gestor) {
+            const cadGestor = await AppDataSource.getRepository(Cadastro).findOne({ where: { funcao: 'gestor', status: true } });
+            if (cadGestor) {
+                gestor = gestorRepo.create({ idCadastro: cadGestor.idUsuario, status: true });
+                gestor = await gestorRepo.save(gestor);
+                console.log(`✅ Gestor padrão criado a partir do cadastro=${cadGestor.idUsuario}`);
+            }
+        }
+        if (!gestor) {
+            console.log('⚠️ Nenhum gestor encontrado para vincular ao OPP. O registro OPP não será criado.');
+            return;
+        }
+        // Cria o registro OPP
+        const opp = oppRepo.create({
+            idCadastro: idCadastro,
+            idGestor: gestor.idGestor,
+            status: true,
+        });
+        const oppSalvo = await oppRepo.save(opp);
+        console.log(`✅ OPP criado com id=${oppSalvo.idOPP} para cadastro=${idCadastro}`);
+        // Vincula as áreas selecionadas
+        if (areas.length > 0) {
+            const oppAreaRepo = AppDataSource.getRepository(OPPArea);
+            const registros = areas.map((idArea) => oppAreaRepo.create({
+                idOPP: oppSalvo.idOPP,
+                idArea: idArea,
+            }));
+            await oppAreaRepo.save(registros);
+            console.log(`✅ ${areas.length} área(s) vinculada(s) ao OPP id=${oppSalvo.idOPP}`);
+        }
+    }
+    async atualizarAreasOpp(idCadastro, areas) {
+        const oppRepo = AppDataSource.getRepository(OPP);
+        const oppAreaRepo = AppDataSource.getRepository(OPPArea);
+        // Busca o OPP pelo id_cadastro
+        let opp = await oppRepo.findOne({ where: { idCadastro } });
+        // Se não existir o registro OPP (cadastros antigos), tenta criar agora
+        if (!opp) {
+            await this.criarOppComAreas(idCadastro, areas);
+            return;
+        }
+        // Remove todas as áreas antigas
+        await oppAreaRepo.delete({ idOPP: opp.idOPP });
+        // Insere as novas áreas
+        if (areas.length > 0) {
+            const registros = areas.map((idArea) => oppAreaRepo.create({
+                idOPP: opp.idOPP,
+                idArea: idArea,
+            }));
+            await oppAreaRepo.save(registros);
+            console.log(`✅ Áreas atualizadas para OPP id=${opp.idOPP}: ${areas.join(', ')}`);
+        }
+    }
+}
+//# sourceMappingURL=cadastro.service.js.map

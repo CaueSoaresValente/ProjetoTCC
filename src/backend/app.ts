@@ -30,7 +30,12 @@ import { PerfilController } from './modules/perfil/perfil.controller.js';
 import { TurmaController } from './modules/turma/turma.controller.js';
 import { CalendarioController } from './modules/professor/calendario.controller.js';
 
-dotenv.config();
+// Em dev local, carrega as variáveis do arquivo .env.
+// Na Vercel, as variáveis vêm do dashboard (Settings > Environment Variables),
+// e o arquivo .env não é deployado.
+if (!process.env.VERCEL) {
+  dotenv.config();
+}
 
 const app = express();
 
@@ -61,7 +66,7 @@ app.post('/api/auth/recuperar', (req, res) => authController.recuperarSenha(req,
 // ====================== ROTAS DE CADASTRO ======================
 app.get('/api/cadastro', authMiddleware(['gestor']), (req, res) => cadastroController.listAll(req, res));
 app.get('/api/cadastro/:id', authMiddleware(['gestor', 'opp', 'professor']), (req, res) => cadastroController.findById(req, res));
-app.post('/api/cadastro', (req, res) => cadastroController.create(req, res));
+app.post('/api/cadastro', authMiddleware(['gestor']), (req, res) => cadastroController.create(req, res));
 app.put('/api/cadastro/:id', authMiddleware(['gestor']), (req, res) => cadastroController.update(req, res));
 app.delete('/api/cadastro/:id', authMiddleware(['gestor']), (req, res) => cadastroController.delete(req, res));
 

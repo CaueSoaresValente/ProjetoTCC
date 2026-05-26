@@ -1,0 +1,1 @@
+{"version":3,"file":"gestor.service.js","sourceRoot":"","sources":["../../../src/backend/modules/gestor/gestor.service.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,gBAAgB,EAAE,MAAM,wBAAwB,CAAC;AAE1D,MAAM,OAAO,aAAa;IAChB,IAAI,GAAG,IAAI,gBAAgB,EAAE,CAAC;IAEtC,KAAK,CAAC,QAAQ,CAAC,EAAU;QACvB,OAAO,MAAM,IAAI,CAAC,IAAI,CAAC,QAAQ,CAAC,EAAE,CAAC,CAAC;IACtC,CAAC;CAGF"}

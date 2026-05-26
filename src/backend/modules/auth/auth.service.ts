@@ -10,16 +10,27 @@ export class AuthService {
   private cadastroRepo = new CadastroRepository();
 
   async login(email: string, senha: string): Promise<{ token: string; usuario: any } | null> {
+    console.log(`[LOGIN] Tentativa de login para e-mail: ${email}`);
     const usuario = await this.cadastroRepo.findByEmail(email);
 
-    if (!usuario || !usuario.status) {
+    if (!usuario) {
+      console.log(`[LOGIN] ❌ Usuário não encontrado no banco de dados para o e-mail: ${email}`);
       return null;
     }
 
-    const senhaCorreta = await this.cadastroRepo.comparePassword(senha, usuario.senha);
-    if (!senhaCorreta) {
+    if (!usuario.status) {
+      console.log(`[LOGIN] ❌ Usuário ${email} encontrado, mas está inativo (status = false)`);
       return null;
     }
+
+    console.log(`[LOGIN] Usuário ${email} encontrado e ativo. Comparando senhas...`);
+    const senhaCorreta = await this.cadastroRepo.comparePassword(senha, usuario.senha);
+    if (!senhaCorreta) {
+      console.log(`[LOGIN] ❌ Senha incorreta para o usuário ${email}`);
+      return null;
+    }
+
+    console.log(`[LOGIN] ✅ Senha correta para o usuário ${email}! Efetuando login...`);
 
     // ==================== CORREÇÃO AQUI ====================
     const token = jwt.sign(

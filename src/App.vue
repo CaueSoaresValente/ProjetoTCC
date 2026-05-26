@@ -34,7 +34,7 @@
   }
 
   const mostrarMenu = computed(() => {
-    const loginRoutes = ['telainput', 'login', 'cadastro']
+    const loginRoutes = ['telainput', 'login']
     return !loginRoutes.includes(route.name as string)
   })
 </script>
