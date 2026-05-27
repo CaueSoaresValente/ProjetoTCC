@@ -107,6 +107,10 @@ async function salvarNovo() {
       mostrarMensagem("Erro: Somente emails @gmail.com são permitidos.", "error");
       return;
   }
+  if (usuarioForm.value.funcao === 'opp' && (!areasSelecionadas.value || areasSelecionadas.value.length === 0)) {
+      mostrarMensagem("Erro: O OPP deve ter pelo menos uma área vinculada.", "error");
+      return;
+  }
   try {
     const payload = { ...usuarioForm.value, areas: areasSelecionadas.value };
     await criarCadastro(payload);
@@ -125,7 +129,10 @@ async function salvarNovo() {
 }
 
 function abrirEditar(user) {
-  usuarioForm.value = { ...user, senha: "Senha001" }; // Mostramos a senha fixa
+  // CORREÇÃO: Não preencher a senha automaticamente.
+  // Se o campo ficar vazio, a senha atual do banco é mantida.
+  // Se o gestor preencher, a senha será atualizada.
+  usuarioForm.value = { ...user, senha: "" };
   
   if (selecionado.value === "OPP") {
     carregarAreas();
@@ -142,6 +149,10 @@ function abrirEditar(user) {
 async function salvarEdicao() {
   if (usuarioForm.value.email && !usuarioForm.value.email.toLowerCase().endsWith("@gmail.com")) {
       mostrarMensagem("Erro: Somente emails @gmail.com são permitidos.", "error");
+      return;
+  }
+  if (usuarioForm.value.funcao === 'opp' && (!areasSelecionadas.value || areasSelecionadas.value.length === 0)) {
+      mostrarMensagem("Erro: O OPP deve ter pelo menos uma área vinculada.", "error");
       return;
   }
   try {
@@ -321,7 +332,7 @@ onMounted(() => {
       <v-card-text class="pa-4">
         <v-text-field v-model="usuarioForm.nome" label="Nome" placeholder="Nome e Sobrenome" persistent-placeholder variant="outlined" class="mb-4"></v-text-field>
         <v-text-field v-model="usuarioForm.email" label="Email" variant="outlined" class="mb-4"></v-text-field>
-        <v-text-field v-model="usuarioForm.senha" label="Senha" variant="outlined" class="mb-4" readonly></v-text-field>
+        <v-text-field v-model="usuarioForm.senha" label="Nova Senha (deixe vazio para manter a atual)" variant="outlined" class="mb-4" placeholder="Deixe vazio para manter a atual" persistent-placeholder></v-text-field>
         <v-select
           v-if="selecionado === 'OPP'"
           v-model="areasSelecionadas"

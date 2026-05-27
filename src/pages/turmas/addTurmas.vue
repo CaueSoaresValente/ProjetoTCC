@@ -631,6 +631,21 @@ async function salvarTurmaNoNavegador() {
     return;
   }
 
+  // Validação: impedir dias com período selecionado mas sem UC
+  const diasSemUC = [];
+  for (const [dia, periodo] of Object.entries(selectedPeriodo.value)) {
+    if (periodo !== null) {
+      const ucsDesteDia = ucsSalvas.value[dia] || [];
+      if (ucsDesteDia.length === 0) {
+        diasSemUC.push(diasLabels[dia] || dia);
+      }
+    }
+  }
+  if (diasSemUC.length > 0) {
+    showAlert("Por favor, adicione pelo menos uma Unidade Curricular para os dias com período selecionado: " + diasSemUC.join(", "), "warning");
+    return;
+  }
+
   const horarios = [];
   for (const [diaSemana, listaUcs] of Object.entries(ucsSalvas.value)) {
     for (const ucItem of listaUcs) {

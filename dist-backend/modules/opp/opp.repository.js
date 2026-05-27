@@ -4,6 +4,12 @@ export class OPPRepository {
     repo = AppDataSource.getRepository(OPP);
     async findAll() {
         return await this.repo.find({
+            where: {
+                status: true,
+                cadastro: {
+                    status: true
+                }
+            },
             relations: ['cadastro', 'oppAreas']
         });
     }

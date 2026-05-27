@@ -3,6 +3,7 @@ import { ref, watch, computed, onMounted } from "vue";
 import {
   getUsuarioLogado,
   buscarProfessorPorCadastro,
+  criarProfessor,
   listarAreas,
   listarAreasProfessor, adicionarAreaProfessor, editarAreaProfessor, excluirAreaProfessor,
   listarUCsProfessor, listarUCsPorArea, adicionarUCProfessor, editarUCProfessor, excluirUCProfessor,
@@ -344,7 +345,7 @@ onMounted(async () => {
   try {
     const usuario = getUsuarioLogado();
     if (usuario) {
-      user.value.name = usuario.nome || "User";
+      // CORREÇÃO: Removido 'user.value.name' que causava ReferenceError e quebrava a inicialização do onMounted.
       
       let professor;
       try {
@@ -354,14 +355,10 @@ onMounted(async () => {
       }
       
       if (!professor) {
-        const response = await fetch('/api/professor', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idCadastro: usuario.idUsuario })
-        });
-        
-        if (response.ok) {
-          professor = await response.json();
+        try {
+          professor = await criarProfessor(usuario.idUsuario);
+        } catch (e) {
+          console.error("Erro ao criar perfil de professor:", e);
         }
       }
 

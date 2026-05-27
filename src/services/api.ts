@@ -297,6 +297,16 @@ export async function buscarProfessorPorCadastro(idCadastro: number) {
   return request(`/api/professor/cadastro/${idCadastro}`);
 }
 
+/**
+ * Cria o perfil de professor associado a um cadastro.
+ */
+export async function criarProfessor(idCadastro: number) {
+  return request('/api/professor', {
+    method: 'POST',
+    body: JSON.stringify({ idCadastro }),
+  });
+}
+
 // ============================================================
 // PROFESSOR — ÁREAS DE ATUAÇÃO — CRUD
 // ============================================================

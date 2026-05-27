@@ -43,6 +43,22 @@ const areasPermitidas = computed(() => {
   return dadosAreas.value.filter(a => idsPermitidos.includes(a.idArea));
 });
 
+const areasExibidas = computed(() => {
+  if (!isOpp.value) return dadosAreas.value;
+  const oppLogado = todosOpps.value.find(o => o.idCadastro === usuarioLogado?.idUsuario);
+  if (!oppLogado || !oppLogado.oppAreas) return [];
+  const idsPermitidos = oppLogado.oppAreas.map(oa => oa.idArea);
+  return dadosAreas.value.filter(a => idsPermitidos.includes(a.idArea));
+});
+
+const competenciasExibidas = computed(() => {
+  if (!isOpp.value) return dadosCompetencias.value;
+  const oppLogado = todosOpps.value.find(o => o.idCadastro === usuarioLogado?.idUsuario);
+  if (!oppLogado || !oppLogado.oppAreas) return [];
+  const idsPermitidos = oppLogado.oppAreas.map(oa => oa.idArea);
+  return dadosCompetencias.value.filter(c => idsPermitidos.includes(c.idArea));
+});
+
 // ====================== ESTADO DA TELA ======================
 
 // Controla qual aba está selecionada: "Áreas" ou "Competências"
@@ -398,12 +414,12 @@ watch(dialogAddArea, (val) => {
         </thead>
         <tbody>
           <!-- Se não tem áreas, mostra mensagem -->
-          <tr v-if="dadosAreas.length === 0">
+          <tr v-if="areasExibidas.length === 0">
             <td colspan="3" class="text-center text-gray-500 py-8">
               Nenhuma área cadastrada. Clique em "Adicionar Área" para começar.
             </td>
           </tr>
-          <tr v-for="item in dadosAreas" :key="item.idArea">
+          <tr v-for="item in areasExibidas" :key="item.idArea">
             <td class="text-center font-bold dark:text-white">
               {{ item.nome }}
             </td>
@@ -452,12 +468,12 @@ watch(dialogAddArea, (val) => {
           </tr>
         </thead>
         <tbody>
-          <tr v-if="dadosCompetencias.length === 0">
+          <tr v-if="competenciasExibidas.length === 0">
             <td colspan="4" class="text-center text-gray-500 py-8">
               Nenhuma UC cadastrada. Clique em "Adicionar UC" para começar.
             </td>
           </tr>
-          <tr v-for="item in dadosCompetencias" :key="item.idUC">
+          <tr v-for="item in competenciasExibidas" :key="item.idUC">
             <td class="text-center font-bold dark:text-white">
               {{ item.nome }}
             </td>
