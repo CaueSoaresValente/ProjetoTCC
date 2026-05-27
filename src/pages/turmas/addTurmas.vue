@@ -572,41 +572,66 @@ const diasLabels = {
   sabado: 'Sábado',
 };
 
-function validarCoberturaIntegral() {
+function validarCoberturaGrade() {
   const erros = [];
 
-  // Define quais turnos cada tipo integral exige
-  const turnosExigidos = {
-    'INT_MT': {
-      turno1: { nome: 'Manhã', periodos: ['M01', 'M02', 'Manhã', 'Manhã + Tarde'] },
-      turno2: { nome: 'Tarde', periodos: ['T01', 'T02', 'Tarde', 'Manhã + Tarde'] },
-    },
-    'INT_MN': {
-      turno1: { nome: 'Manhã', periodos: ['M01', 'M02', 'Manhã', 'Manhã + Noite'] },
-      turno2: { nome: 'Noite', periodos: ['N01', 'N02', 'Noite', 'Manhã + Noite'] },
-    },
-    'INT_TN': {
-      turno1: { nome: 'Tarde', periodos: ['T01', 'T02', 'Tarde', 'Tarde + Noite'] },
-      turno2: { nome: 'Noite', periodos: ['N01', 'N02', 'Noite', 'Tarde + Noite'] },
-    },
-  };
-
   for (const [dia, periodo] of Object.entries(selectedPeriodo.value)) {
-    if (!periodo || !turnosExigidos[periodo]) continue;
+    if (!periodo) continue;
 
     const ucsNoDia = ucsSalvas.value[dia] || [];
     const periodosUsados = ucsNoDia.map(uc => uc.periodo);
-    const exigencias = turnosExigidos[periodo];
 
-    const temTurno1 = exigencias.turno1.periodos.some(p => periodosUsados.includes(p));
-    const temTurno2 = exigencias.turno2.periodos.some(p => periodosUsados.includes(p));
+    const temManhaCompleta = periodosUsados.includes('Manhã') ||
+                             periodosUsados.includes('Manhã + Tarde') ||
+                             periodosUsados.includes('Manhã + Noite') ||
+                             (periodosUsados.includes('M01') && periodosUsados.includes('M02'));
 
-    const faltando = [];
-    if (!temTurno1) faltando.push(exigencias.turno1.nome);
-    if (!temTurno2) faltando.push(exigencias.turno2.nome);
+    const temTardeCompleta = periodosUsados.includes('Tarde') ||
+                             periodosUsados.includes('Manhã + Tarde') ||
+                             periodosUsados.includes('Tarde + Noite') ||
+                             (periodosUsados.includes('T01') && periodosUsados.includes('T02'));
 
-    if (faltando.length > 0) {
-      erros.push(`• ${diasLabels[dia]}: Faltam UCs no período da ${faltando.join(' e ')}. O dia integral exige cobertura de ${exigencias.turno1.nome} e ${exigencias.turno2.nome}.`);
+    const temNoiteCompleta = periodosUsados.includes('Noite') ||
+                             periodosUsados.includes('Manhã + Noite') ||
+                             periodosUsados.includes('Tarde + Noite') ||
+                             (periodosUsados.includes('N01') && periodosUsados.includes('N02'));
+
+    if (periodo === 'manha') {
+      if (!temManhaCompleta) {
+        erros.push(`• ${diasLabels[dia]}: O período da Manhã deve ser totalmente preenchido. Selecione uma UC com o período "Manhã" inteiro ou duas UCs cobrindo "M01" e "M02".`);
+      }
+    } else if (periodo === 'tarde') {
+      if (!temTardeCompleta) {
+        erros.push(`• ${diasLabels[dia]}: O período da Tarde deve ser totalmente preenchido. Selecione uma UC com o período "Tarde" inteiro ou duas UCs cobrindo "T01" e "T02".`);
+      }
+    } else if (periodo === 'noite') {
+      if (!temNoiteCompleta) {
+        erros.push(`• ${diasLabels[dia]}: O período da Noite deve ser totalmente preenchido. Selecione uma UC com o período "Noite" inteiro ou duas UCs cobrindo "N01" e "N02".`);
+      }
+    } else if (periodo === 'INT_MT') {
+      if (periodosUsados.includes('Manhã + Tarde')) continue;
+      const faltando = [];
+      if (!temManhaCompleta) faltando.push('Manhã (exige "Manhã" inteiro ou ambos "M01" e "M02")');
+      if (!temTardeCompleta) faltando.push('Tarde (exige "Tarde" inteiro ou ambos "T01" e "T02")');
+      if (faltando.length > 0) {
+        erros.push(`• ${diasLabels[dia]} (Integral Manhã + Tarde): Os turnos devem ser totalmente preenchidos. Faltam: ${faltando.join(' e ')}.`);
+      }
+    } else if (periodo === 'INT_MN') {
+      if (periodosUsados.includes('Manhã + Noite')) continue;
+      const faltando = [];
+      if (!temManhaCompleta) faltando.push('Manhã (exige "Manhã" inteiro ou ambos "M01" e "M02")');
+      if (!temNoiteCompleta) faltando.push('Noite (exige "Noite" inteiro ou ambos "N01" e "N02")');
+      if (faltando.length > 0) {
+        erros.push(`• ${diasLabels[dia]} (Integral Manhã + Noite): Os turnos devem ser totalmente preenchidos. Faltam: ${faltando.join(' e ')}.`);
+      }
+    } else if (periodo === 'INT_TN') {
+      if (periodosUsados.includes('Tarde + Noite')) continue;
+      const faltando = [];
+      if (!temTardeCompleta) faltando.push('Tarde (exige "Tarde" inteiro ou ambos "T01" e "T02")');
+      if (!temNoiteCompleta) faltando.push('Noite (exige "Noite" inteiro ou ambos "N01" e "N02")');
+      if (faltando.length > 0) {
+        erros.push(`• ${diasLabels[dia]} (Integral Tarde + Noite): Os turnos devem ser totalmente preenchidos. Faltam: ${faltando.join(' e ')}.`);
+      }
     }
   }
 
@@ -664,10 +689,10 @@ async function salvarTurmaNoNavegador() {
     return;
   }
 
-  // Validação de cobertura integral: se o dia é integral, TODOS os turnos precisam ser cobertos
-  const errosCobertura = validarCoberturaIntegral();
-  if (errosCobertura.length > 0) {
-    showAlert("Erro na grade semanal:\n\n" + errosCobertura.join("\n"), "error", "mdi-alert-octagon");
+  // Validação de cobertura da grade semanal: garante que todos os turnos selecionados estejam totalmente preenchidos
+  const errosGrade = validarCoberturaGrade();
+  if (errosGrade.length > 0) {
+    showAlert("Erro na grade semanal:\n\n" + errosGrade.join("\n"), "error", "mdi-alert-octagon");
     return;
   }
 
