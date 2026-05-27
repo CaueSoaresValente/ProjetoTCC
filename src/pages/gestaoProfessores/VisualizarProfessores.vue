@@ -12,6 +12,7 @@ import {
   listarProfessoresPerfis,
   buscarPerfilProfessor,
   getUsuarioLogado,
+  listarOpps,
 } from "@/services/api";
 
 // ====================== ESTADO DA PÁGINA ======================
@@ -48,14 +49,35 @@ async function carregarProfessores() {
     const data = await listarProfessoresPerfis();
     professores.value = data;
 
-    // Extrair áreas únicas para o filtro
-    const todasAreas = new Set<string>();
-    data.forEach((prof: any) => {
-      prof.areas?.forEach((area: any) => {
-        if (area.nome) todasAreas.add(area.nome);
+    const usuario = getUsuarioLogado();
+    const isOpp = usuario?.funcao === 'opp';
+
+    if (isOpp) {
+      try {
+        const opps = await listarOpps();
+        const oppLogado = opps.find((o: any) => o.idCadastro === usuario?.idUsuario);
+        if (oppLogado && oppLogado.oppAreas) {
+          areasDisponiveis.value = oppLogado.oppAreas
+            .map((oa: any) => oa.area?.nome)
+            .filter(Boolean)
+            .sort();
+        } else {
+          areasDisponiveis.value = [];
+        }
+      } catch (e) {
+        console.error("Erro ao carregar áreas do OPP logado:", e);
+        areasDisponiveis.value = [];
+      }
+    } else {
+      // Extrair áreas únicas para o filtro (Gestor)
+      const todasAreas = new Set<string>();
+      data.forEach((prof: any) => {
+        prof.areas?.forEach((area: any) => {
+          if (area.nome) todasAreas.add(area.nome);
+        });
       });
-    });
-    areasDisponiveis.value = [...todasAreas].sort();
+      areasDisponiveis.value = [...todasAreas].sort();
+    }
   } catch (error: any) {
     console.error("Erro ao carregar professores:", error.message);
     erro.value = obterMensagemErro(error);

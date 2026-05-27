@@ -129,10 +129,9 @@ async function salvarNovo() {
 }
 
 function abrirEditar(user) {
-  // CORREÇÃO: Não preencher a senha automaticamente.
-  // Se o campo ficar vazio, a senha atual do banco é mantida.
-  // Se o gestor preencher, a senha será atualizada.
-  usuarioForm.value = { ...user, senha: "" };
+  // CORREÇÃO: Preencher visualmente a senha com "Senha001" (senha padrão vinculada).
+  // Se o gestor não alterar, a senha atual é mantida intacta no banco.
+  usuarioForm.value = { ...user, senha: "Senha001" };
   
   if (selecionado.value === "OPP") {
     carregarAreas();
@@ -158,8 +157,8 @@ async function salvarEdicao() {
   try {
     const { idUsuario, ...dados } = usuarioForm.value;
     const payload = { ...dados, areas: areasSelecionadas.value };
-    // Se a senha estiver vazia, não a enviamos (mantém a atual)
-    if (!payload.senha) delete payload.senha;
+    // Se a senha for a padrão "Senha001" ou estiver vazia, removemos para manter a senha atual do banco
+    if (!payload.senha || payload.senha === "Senha001") delete payload.senha;
     
     await editarCadastro(idUsuario, payload);
     dialogEdit.value = false;
@@ -332,7 +331,7 @@ onMounted(() => {
       <v-card-text class="pa-4">
         <v-text-field v-model="usuarioForm.nome" label="Nome" placeholder="Nome e Sobrenome" persistent-placeholder variant="outlined" class="mb-4"></v-text-field>
         <v-text-field v-model="usuarioForm.email" label="Email" variant="outlined" class="mb-4"></v-text-field>
-        <v-text-field v-model="usuarioForm.senha" label="Nova Senha (deixe vazio para manter a atual)" variant="outlined" class="mb-4" placeholder="Deixe vazio para manter a atual" persistent-placeholder></v-text-field>
+        <v-text-field v-model="usuarioForm.senha" label="Senha" variant="outlined" class="mb-4"></v-text-field>
         <v-select
           v-if="selecionado === 'OPP'"
           v-model="areasSelecionadas"

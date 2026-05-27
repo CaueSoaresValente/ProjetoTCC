@@ -171,12 +171,19 @@ const salvarUnidade = async () => {
 };
 
 const salvarCertificacao = async () => {
+  if (!novaCertificacaoNome.value.trim() || 
+      !novaCertificacaoInstituicao.value.trim() || 
+      !novaCertificacaoCarga.value.trim() || 
+      !novaCertificacaoData.value) {
+    mostrarNotificacao("Por favor, preencha todos os campos da certificação!", "error");
+    return;
+  }
   try {
     await adicionarCertificacao(idProfessor.value, {
       nome: novaCertificacaoNome.value.trim(),
-      instituicao: novaCertificacaoInstituicao.value.trim() || undefined,
-      cargaHoraria: novaCertificacaoCarga.value.trim() || undefined,
-      dataObtencao: novaCertificacaoData.value || undefined,
+      instituicao: novaCertificacaoInstituicao.value.trim(),
+      cargaHoraria: novaCertificacaoCarga.value.trim(),
+      dataObtencao: novaCertificacaoData.value,
     });
     await carregarCertificacoes();
     mostrarNotificacao("Certificação adicionada com sucesso!");
@@ -230,12 +237,20 @@ const abrirEditCertificacao = (item) => {
 
 const salvarEdicaoCertificacao = async () => {
   if (!certificacaoSelecionada.value) return;
+  const { nome, instituicao, cargaHoraria, dataObtencao } = certificacaoSelecionada.value;
+  if (!nome?.trim() || 
+      !instituicao?.trim() || 
+      !String(cargaHoraria || '').trim() || 
+      !dataObtencao) {
+    mostrarNotificacao("Por favor, preencha todos os campos da certificação!", "error");
+    return;
+  }
   try {
     await editarCertificacao(certificacaoSelecionada.value.idCertificacao, {
-      nome: certificacaoSelecionada.value.nome,
-      instituicao: certificacaoSelecionada.value.instituicao,
-      cargaHoraria: certificacaoSelecionada.value.cargaHoraria,
-      dataObtencao: certificacaoSelecionada.value.dataObtencao,
+      nome: nome.trim(),
+      instituicao: instituicao.trim(),
+      cargaHoraria: String(cargaHoraria).trim(),
+      dataObtencao: dataObtencao,
     });
     await carregarCertificacoes();
     mostrarNotificacao("Certificação atualizada com sucesso!");
