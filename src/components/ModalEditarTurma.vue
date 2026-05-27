@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, onMounted, computed } from "vue";
-import { getUsuarioLogado } from "@/services/api";
+import { getUsuarioLogado, listarAreas, listarOpps, listarCompetencias, listarUCsPorArea } from "@/services/api";
 
 const props = defineProps({
   modelValue: Boolean,
@@ -65,8 +65,7 @@ const filteredCompetencias = computed(() => {
 
 async function carregarAreas() {
   try {
-    const response = await fetch("http://localhost:3001/api/areas");
-    const data = await response.json();
+    const data = await listarAreas();
     areasDisponiveis.value = data.map(area => ({
       title: area.nome,
       value: area.idArea
@@ -78,8 +77,7 @@ async function carregarAreas() {
 
 async function carregarOpps() {
   try {
-    const response = await fetch("http://localhost:3001/api/opps");
-    const data = await response.json();
+    const data = await listarOpps();
     todosOpps.value = data;
     filtrarOpps();
   } catch (error) {
@@ -109,8 +107,7 @@ async function carregarUCs() {
     return;
   }
   try {
-    const response = await fetch(`http://localhost:3001/api/competencias/area/${areaId}`);
-    const data = await response.json();
+    const data = await listarUCsPorArea(areaId);
     unidadesCurriculares.value = data.map(uc => {
       let carga = "";
       if (uc.descricao) {
@@ -150,8 +147,7 @@ onMounted(async () => {
 
 async function carregarTodasUCs() {
   try {
-    const response = await fetch("http://localhost:3001/api/competencias");
-    const data = await response.json();
+    const data = await listarCompetencias();
     todasUnidadesCurriculares.value = data.map(uc => {
       let carga = "";
       if (uc.descricao) {

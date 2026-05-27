@@ -5,6 +5,7 @@ import {
   buscarProfessoresElegiveis,
   alocarProfessor,
   desalocarProfessor,
+  listarUCsPorArea,
 } from "@/services/api";
 
 // ====================== ESTADO ======================
@@ -127,10 +128,7 @@ async function buscarProfessores() {
     if (!slotSelecionado.value.idUC) {
       const areaId = turmaSelecionada.value.idArea;
       if (areaId) {
-        const response = await fetch(
-          `http://localhost:3001/api/competencias/area/${areaId}`
-        );
-        const ucs = await response.json();
+        const ucs = await listarUCsPorArea(areaId);
         const ucEncontrada = ucs.find(
           (uc: any) => uc.nome === slotSelecionado.value?.disciplina
         );

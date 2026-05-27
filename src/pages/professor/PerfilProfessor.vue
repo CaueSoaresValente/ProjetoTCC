@@ -354,7 +354,7 @@ onMounted(async () => {
       }
       
       if (!professor) {
-        const response = await fetch('http://localhost:3001/api/professor', {
+        const response = await fetch('/api/professor', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idCadastro: usuario.idUsuario })

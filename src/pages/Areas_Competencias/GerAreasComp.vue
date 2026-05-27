@@ -26,6 +26,7 @@ import {
   editarCompetencia,
   excluirCompetencia,
   getUsuarioLogado,
+  listarOpps,
 } from "@/services/api";
 
 // ====================== DADOS DO USUÁRIO LOGADO ======================
@@ -131,8 +132,8 @@ async function carregarCompetencias() {
 
 async function carregarOpps() {
   try {
-    const response = await fetch("http://localhost:3001/api/opps");
-    todosOpps.value = await response.json();
+    const data = await listarOpps();
+    todosOpps.value = data;
   } catch (error) {
     console.error("Erro ao carregar OPPs:", error);
   }

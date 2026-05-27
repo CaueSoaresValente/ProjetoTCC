@@ -108,7 +108,7 @@ const contarPeriodos = (dia) => {
 // Busca as disponibilidades salvas no banco e preenche o estado local
 const carregarDisponibilidades = async (professorId) => {
   try {
-    const response = await fetch(`http://localhost:3001/api/professor/${professorId}/disponibilidade`);
+    const response = await fetch(`/api/professor/${professorId}/disponibilidade`);
     if (!response.ok) return;
 
     const dados = await response.json();
@@ -141,7 +141,7 @@ const salvarDisponibilidades = async () => {
   salvando.value = true;
   try {
     const response = await fetch(
-      `http://localhost:3001/api/professor/${idProfessor.value}/disponibilidade`,
+      `/api/professor/${idProfessor.value}/disponibilidade`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -172,7 +172,7 @@ onMounted(async () => {
 
     // Busca o professor pelo idCadastro do login
     const response = await fetch(
-      `http://localhost:3001/api/professor/cadastro/${usuario.idUsuario}`
+      `/api/professor/cadastro/${usuario.idUsuario}`
     );
 
     if (response.ok) {

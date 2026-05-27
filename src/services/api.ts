@@ -271,6 +271,18 @@ export async function excluirCompetencia(id: number) {
 }
 
 // ============================================================
+// OPPs — Listar todos os OPPs
+// ============================================================
+
+/**
+ * Lista todos os OPPs cadastrados.
+ * Retorna array com: idOPP, idCadastro, cadastro, oppAreas[]
+ */
+export async function listarOpps() {
+  return request('/api/opps');
+}
+
+// ============================================================
 // PROFESSOR — Buscar por Cadastro
 // ============================================================
 // Quando o professor faz login, o token tem o idUsuario (cadastro).

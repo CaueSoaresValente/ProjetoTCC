@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, watch, computed } from "vue";
 import { useRouter } from "vue-router";
-import { criarTurma, listarUCsPorArea, getUsuarioLogado } from "@/services/api";
+import { criarTurma, listarUCsPorArea, getUsuarioLogado, listarAreas, listarOpps, listarCompetencias } from "@/services/api";
 
 // ====================== DADOS DO USUÁRIO LOGADO ======================
 const usuarioLogado = getUsuarioLogado();
@@ -504,8 +504,7 @@ onMounted(async () => {
  */
 async function carregarTodasUCs() {
   try {
-    const response = await fetch("http://localhost:3001/api/competencias");
-    const data = await response.json();
+    const data = await listarCompetencias();
     todasUnidadesCurriculares.value = data.map(uc => {
       let carga = "";
       if (uc.descricao) {
@@ -530,9 +529,9 @@ async function carregarTodasUCs() {
 // --------------------------------------------------------
 async function carregarAreas() {
   try {
-    // Fazemos um pedido (fetch) para a nossa rota do backend
-    const response = await fetch("http://localhost:3001/api/areas");
-    const data = await response.json();
+    // Usamos a função centralizada do api.ts que usa caminhos relativos
+    // Isso funciona tanto no localhost (via Vite proxy) quanto na Vercel
+    const data = await listarAreas();
     
     // Mapeamos a resposta para o formato esperado pelo <v-select>
     // title: o texto que aparece na tela (ex: Tecnologia)
@@ -551,8 +550,7 @@ async function carregarAreas() {
 // --------------------------------------------------------
 async function carregarOpps() {
   try {
-    const response = await fetch("http://localhost:3001/api/opps");
-    const data = await response.json();
+    const data = await listarOpps();
     
     // Guardamos os dados completos do banco na nossa variável "escondida"
     // Não mapeamos para 'oppsResponsavel' logo de cara, porque o usuário
