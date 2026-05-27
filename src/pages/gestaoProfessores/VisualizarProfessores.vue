@@ -13,6 +13,7 @@ import {
   buscarPerfilProfessor,
   getUsuarioLogado,
   listarOpps,
+  listarAreas,
 } from "@/services/api";
 
 // ====================== ESTADO DA PÁGINA ======================
@@ -69,14 +70,24 @@ async function carregarProfessores() {
         areasDisponiveis.value = [];
       }
     } else {
-      // Extrair áreas únicas para o filtro (Gestor)
-      const todasAreas = new Set<string>();
-      data.forEach((prof: any) => {
-        prof.areas?.forEach((area: any) => {
-          if (area.nome) todasAreas.add(area.nome);
+      // Gestor vê todas: Buscar todas as áreas cadastradas no sistema
+      try {
+        const areas = await listarAreas();
+        areasDisponiveis.value = areas
+          .map((a: any) => a.nome)
+          .filter(Boolean)
+          .sort();
+      } catch (e) {
+        console.error("Erro ao carregar todas as áreas do sistema:", e);
+        // Fallback: extrair das áreas dos professores
+        const todasAreas = new Set<string>();
+        data.forEach((prof: any) => {
+          prof.areas?.forEach((area: any) => {
+            if (area.nome) todasAreas.add(area.nome);
+          });
         });
-      });
-      areasDisponiveis.value = [...todasAreas].sort();
+        areasDisponiveis.value = [...todasAreas].sort();
+      }
     }
   } catch (error: any) {
     console.error("Erro ao carregar professores:", error.message);
