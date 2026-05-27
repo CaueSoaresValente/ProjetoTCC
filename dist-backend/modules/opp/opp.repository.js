@@ -10,7 +10,7 @@ export class OPPRepository {
                     status: true
                 }
             },
-            relations: ['cadastro', 'oppAreas']
+            relations: ['cadastro', 'oppAreas', 'oppAreas.area']
         });
     }
     async findById(id) {
