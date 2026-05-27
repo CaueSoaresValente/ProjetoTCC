@@ -541,6 +541,54 @@ function validarCoberturaGrade() {
 }
 
 function salvar() {
+  if (!form.value.dataInicio || !form.value.dataFim) {
+    showAlert("Por favor, preencha as datas de início e término!", "warning");
+    return;
+  }
+
+  const startDate = new Date(form.value.dataInicio + "T00:00:00");
+  const endDate = new Date(form.value.dataFim + "T00:00:00");
+
+  if (startDate > endDate) {
+    showAlert("A data de início não pode ser maior que a data de término!", "warning");
+    return;
+  }
+
+  // Validação: impedir seleção de dias da semana que não ocorrem no período da turma
+  const mapaDiasJs = {
+    segunda: 1,
+    terca: 2,
+    quarta: 3,
+    quinta: 4,
+    sexta: 5,
+    sabado: 6
+  };
+
+  const diasSemOcorrencia = [];
+  for (const [dia, periodo] of Object.entries(selectedPeriodo.value)) {
+    if (periodo !== null) {
+      const diaSemanaJs = mapaDiasJs[dia];
+      let ocorrencias = 0;
+      const current = new Date(startDate);
+      while (current <= endDate) {
+        if (current.getDay() === diaSemanaJs) {
+          ocorrencias++;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      if (ocorrencias === 0) {
+        diasSemOcorrencia.push(diasLabels[dia] || dia);
+      }
+    }
+  }
+
+  if (diasSemOcorrencia.length > 0) {
+    const dataInicioBR = form.value.dataInicio.split("-").reverse().join("/");
+    const dataFimBR = form.value.dataFim.split("-").reverse().join("/");
+    showAlert(`O intervalo de datas selecionado (de ${dataInicioBR} a ${dataFimBR}) não contém o seguinte dia da semana: ${diasSemOcorrencia.join(", ")}. Remova esse dia da grade ou ajuste as datas da turma.`, "warning");
+    return;
+  }
+
   // Validação: impedir dias com período selecionado mas sem UC
   const diasSemUC = [];
   for (const [dia, periodo] of Object.entries(selectedPeriodo.value)) {
