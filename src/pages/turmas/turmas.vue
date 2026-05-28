@@ -30,6 +30,7 @@ function abrirGrade(turma) {
 }
 
 const editModal = ref(false);
+const salvando = ref(false);
 const turmaParaEditar = ref(null);
 
 function abrirEdicao(turma) {
@@ -86,8 +87,9 @@ async function salvarTurma(form) {
         editModal.value = false;
         return;
     }
+    salvando.value = true;
     try {
-        await editarTurma(turmaParaEditar.value.idTurma, {
+        const result = await editarTurma(turmaParaEditar.value.idTurma, {
             nome: form.label,
             tipoCurso: form.modalidade,
             dataInicio: form.dataInicio,
@@ -96,11 +98,21 @@ async function salvarTurma(form) {
             idOPP: form.idOPP,
             idArea: form.idArea,
         });
+        
+        // Atualiza a turma localmente na lista sem precisar fazer um fetch pesado de todas as turmas
+        const index = turmas.value.findIndex(t => t.idTurma === result.idTurma);
+        if (index !== -1) {
+            turmas.value[index] = result;
+        } else {
+            await carregarTurmas();
+        }
+
         editModal.value = false;
         showAlert("Turma salva com sucesso!");
-        await carregarTurmas();
     } catch (e) {
         showAlert(formatarErro(e.message) || "Erro ao salvar turma", "error", "mdi-alert-circle");
+    } finally {
+        salvando.value = false;
     }
 }
 
@@ -460,6 +472,7 @@ const filteredTurmas = computed(() => {
         v-if="editModal"
         v-model="editModal" 
         :turma="turmaParaEditar" 
+        :loading="salvando"
         @save="salvarTurma"
     />
 

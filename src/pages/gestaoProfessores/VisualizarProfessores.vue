@@ -177,6 +177,27 @@ const periodosLabel: Record<string, string> = {
   noite: "Noite",
 };
 
+// Normaliza o dia da semana removendo acentos e sufixo -feira para comparações robustas
+const normalizarDia = (dia: string): string => {
+  if (!dia) return "";
+  return dia
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace("-feira", "");
+};
+
+// Normaliza o período da turma_uc (M01, T01, N01, INT, etc.)
+// para o período do calendário (manha, tarde, noite)
+const normalizarPeriodo = (periodo: string): string => {
+  const p = periodo.toUpperCase();
+  if (p.startsWith('M') || p === 'MANHÃ' || p === 'MANHA') return 'manha';
+  if (p.startsWith('T') || p === 'TARDE') return 'tarde';
+  if (p.startsWith('N') || p === 'NOITE') return 'noite';
+  if (p === 'INT' || p === 'INTEGRAL' || p.startsWith('INT_')) return 'manha'; // integral cai em manhã
+  return periodo.toLowerCase();
+};
+
 // Busca a turma que o professor tem em determinado dia/período
 const getTurmaCalendario = (dia: string, periodo: string) => {
   if (!perfilSelecionado.value?.turmas) return null;
@@ -184,8 +205,8 @@ const getTurmaCalendario = (dia: string, periodo: string) => {
   for (const turma of perfilSelecionado.value.turmas) {
     for (const horario of turma.horarios) {
       if (
-        horario.diaSemana.toLowerCase() === dia.toLowerCase() &&
-        horario.periodo.toLowerCase() === periodo.toLowerCase()
+        normalizarDia(horario.diaSemana) === normalizarDia(dia) &&
+        normalizarPeriodo(horario.periodo) === periodo.toLowerCase()
       ) {
         return { nomeTurma: turma.nome, nomeUC: horario.uc };
       }
@@ -200,7 +221,7 @@ const temDisponibilidade = (dia: string, periodo: string) => {
 
   return perfilSelecionado.value.disponibilidade.some(
     (d: any) =>
-      d.diaSemana.toLowerCase() === dia.toLowerCase() &&
+      normalizarDia(d.diaSemana) === normalizarDia(dia) &&
       d.periodo.toLowerCase() === periodo.toLowerCase()
   );
 };
@@ -584,9 +605,18 @@ const getIniciais = (nome: string) => {
                       <v-avatar color="red-lighten-5" class="rounded-lg dark:bg-red-900/30" size="40">
                         <v-icon icon="mdi-school" color="red-darken-2" class="dark:text-red-lighten-2" size="20"></v-icon>
                       </v-avatar>
-                      <div>
-                        <p class="font-weight-bold text-body-2 mb-0 dark:text-white">{{ turma.nome }}</p>
-                        <p class="text-caption text-grey mb-0 dark:text-grey-lighten-1">{{ turma.tipoCurso }}</p>
+                      <div class="flex flex-col items-start gap-0.5">
+                        <p class="font-extrabold text-sm tracking-tight text-gray-800 dark:text-white mb-0">{{ turma.nome }}</p>
+                        <span 
+                          class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border"
+                          :class="{
+                            'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30': turma.tipoCurso?.toLowerCase() === 'tec' || turma.tipoCurso?.toLowerCase() === 'tecnico',
+                            'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30': turma.tipoCurso?.toLowerCase() === 'cai',
+                            'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30': turma.tipoCurso?.toLowerCase() === 'fic',
+                          }"
+                        >
+                          {{ turma.tipoCurso?.toLowerCase() === 'tec' ? 'Técnico' : turma.tipoCurso?.toLowerCase() === 'cai' ? 'CAI' : turma.tipoCurso?.toLowerCase() === 'fic' ? 'FIC' : turma.tipoCurso }}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -975,17 +1005,24 @@ const getIniciais = (nome: string) => {
   border: 1px solid #f3f4f6;
 }
 
+.calendar-wrapper,
+.turma-mini-card,
+.cert-item-card {
+  border: 1px solid #eef2f6 !important;
+}
+
 /* Modo Escuro - Ajustes Finos */
 :deep(.v-theme--dark) .period-name {
   background: #2a2a2a;
   box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
 
+:deep(.v-theme--dark) .calendar-wrapper,
 :deep(.v-theme--dark) .uc-modern-card,
 :deep(.v-theme--dark) .cert-item-card,
 :deep(.v-theme--dark) .turma-mini-card {
   background: #2a2a2a;
-  border-color: #3a3a3a;
+  border-color: #3a3a3a !important;
 }
 
 :deep(.v-theme--dark) .calendar-slot.active {

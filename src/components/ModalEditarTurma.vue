@@ -1,10 +1,11 @@
 <script setup>
-import { ref, watch, onMounted, computed } from "vue";
+import { ref, watch, onMounted, computed, nextTick } from "vue";
 import { getUsuarioLogado, listarAreas, listarOpps, listarCompetencias, listarUCsPorArea } from "@/services/api";
 
 const props = defineProps({
   modelValue: Boolean,
   turma: Object,
+  loading: Boolean,
 });
 
 const emit = defineEmits(["update:modelValue", "save"]);
@@ -127,11 +128,14 @@ async function carregarUCs() {
   }
 }
 
+// Flag para evitar que o watch limpe idOPP durante a inicialização
+const dadosCarregados = ref(false);
+
 // Observa mudanças na área para filtrar OPPs e UCs
 watch(() => form.value.idArea, (novaAreaId, antigaAreaId) => {
   filtrarOpps();
-  // Limpa a seleção de OPP e UCs apenas se for uma troca intencional (antigaAreaId !== undefined)
-  if (antigaAreaId !== undefined && antigaAreaId !== null && novaAreaId !== antigaAreaId) {
+  // Limpa a seleção de OPP e UCs apenas se for uma troca intencional do usuário (após dados carregados)
+  if (dadosCarregados.value && antigaAreaId !== undefined && antigaAreaId !== null && novaAreaId !== antigaAreaId) {
     form.value.idOPP = null;
     Object.keys(ucsSalvas.value).forEach(dia => {
       ucsSalvas.value[dia] = [];
@@ -143,6 +147,19 @@ onMounted(async () => {
   await carregarAreas();
   await carregarOpps();
   await carregarTodasUCs();
+
+  // Após todos os dados carregarem, re-popular o formulário para garantir que
+  // os v-selects de Área e OPP encontrem os itens correspondentes na lista
+  if (props.turma) {
+    form.value.idArea = props.turma.idArea || null;
+    filtrarOpps();
+    form.value.idOPP = props.turma.idOPP || null;
+  }
+
+  // Liberar o watch para funcionar normalmente nas interações do usuário
+  nextTick(() => {
+    dadosCarregados.value = true;
+  });
 });
 
 async function carregarTodasUCs() {
@@ -235,7 +252,7 @@ watch(() => props.turma, (newTurma) => {
       label: newTurma.label,
       idArea: newTurma.idArea || null,
       modalidade: newTurma.modalidade,
-      idOPP: newTurma.idOPP || null,
+      idOPP: null,
       dataInicio: newTurma.dataInicioISO || newTurma.dataInicio || "",
       dataFim: newTurma.dataTerminoISO || newTurma.dataFim || "",
       aulasSemana: newTurma.aulasSemana || 4,
@@ -948,16 +965,22 @@ function salvar() {
       <v-card-actions class="pa-4 bg-gray-50 dark:bg-gray-800">
         <v-spacer></v-spacer>
         <v-btn variant="text" color="grey-darken-1" @click="emit('update:modelValue', false)">Cancelar</v-btn>
-        <v-btn color="red-darken-1" class="bg-red-600 text-white px-6" @click="salvar">Salvar</v-btn>
+        <v-btn color="red-darken-1" class="bg-red-600 text-white px-6" :loading="loading" :disabled="loading" @click="salvar">Salvar</v-btn>
       </v-card-actions>
     </v-card>
 
-    <v-dialog v-model="modalUC" max-width="520">
-      <v-card class="pa-5 rounded-xl">
-        <v-card-title class="text-lg font-bold">Selecionar Unidades Curriculares</v-card-title>
+    <v-dialog v-model="modalUC" max-width="550" persistent>
+      <v-card class="rounded-lg border-t-4 border-red-600 shadow-xl dark:bg-[#121212]">
+        <!-- Título com o padrão do sistema -->
+        <v-card-title class="px-6 pt-6 pb-2">
+          <h2 class="text-xl font-bold text-gray-800 dark:text-white">Selecionar Unidades Curriculares</h2>
+          <p class="text-[12px] text-gray-500 font-medium">Escolha as matérias que compõem este dia da turma</p>
+        </v-card-title>
 
-        <!-- Área de Filtros -->
-        <div class="space-y-3 mb-4 mt-2">
+        <v-divider class="mx-6 mb-4"></v-divider>
+
+        <!-- Área de Filtros - Seguindo o padrão de inputs do formulário -->
+        <div class="px-6 space-y-3 mb-4">
           <div>
             <p class="mb-1 font-bold text-[12px] text-gray-500 uppercase tracking-wide">Filtrar por Área</p>
             <v-select v-model="areaFiltroModal" :items="areasDisponiveis" item-title="title" item-value="value"
@@ -972,24 +995,30 @@ function salvar() {
         </div>
 
         <!-- Lista de UCs com checkboxes + período -->
-        <div style="max-height: 350px; overflow-y: auto" class="pr-1 pt-2">
-          <div v-for="(uc, index) in filteredCompetencias" :key="index">
-            <div class="flex items-center gap-2 mb-4 pb-2 px-4 shadow-sm border-b">
-              <v-checkbox :model-value="isUCSelected(uc.idUC)" @update:model-value="toggleUCSelection(uc)"
-                :label="uc.carga ? uc.nome + ' (' + uc.carga + ')' : uc.nome" color="red" hide-details density="compact"
-                :disabled="!isUCSelected(uc.idUC) && periodosDisponiveisPara(uc.idUC).length === 0"
-                class="flex-1"></v-checkbox>
-              <v-select v-if="isUCSelected(uc.idUC)" :model-value="getSelectedUCPeriod(uc.idUC)"
-                @update:model-value="updateUCPeriod(uc.idUC, $event)" :items="periodosDisponiveisPara(uc.idUC)" label="Período"
-                variant="outlined" density="compact" hide-details class="max-w-[130px] mt-2"></v-select>
-            </div>
+        <div style="max-height: 350px; overflow-y: auto" class="px-6 pt-2">
+          <div v-for="(uc, index) in filteredCompetencias" :key="uc.idUC" class="flex items-center gap-2 mb-4">
+            <v-checkbox :model-value="isUCSelected(uc.idUC)" @update:model-value="toggleUCSelection(uc)"
+              :label="uc.carga ? uc.nome + ' (' + uc.carga + ')' : uc.nome" color="red" hide-details density="compact"
+              :disabled="!isUCSelected(uc.idUC) && periodosDisponiveisPara(uc.idUC).length === 0"
+              class="flex-1"></v-checkbox>
+            <v-select v-if="isUCSelected(uc.idUC)" :model-value="getSelectedUCPeriod(uc.idUC)"
+              @update:model-value="updateUCPeriod(uc.idUC, $event)" :items="periodosDisponiveisPara(uc.idUC)" label="Período"
+              variant="outlined" density="compact" hide-details class="max-w-[130px]"></v-select>
+          </div>
+          <div v-if="filteredCompetencias.length === 0" class="text-center py-10 text-gray-400 font-bold uppercase text-xs">
+            Nenhuma unidade encontrada
           </div>
         </div>
 
-        <!-- Botões do modal -->
-        <v-card-actions class="justify-end mt-4">
-          <v-btn variant="text" @click="modalUC = false">Cancelar</v-btn>
-          <v-btn color="red" class="bg-red-600 text-white" @click="salvarUCs">Salvar</v-btn>
+        <!-- Botões de Ação - Padronizados -->
+        <v-card-actions class="px-6 py-6 pt-2">
+          <v-spacer></v-spacer>
+          <v-btn variant="outlined" color="red" class="px-6 text-none font-bold" @click="modalUC = false">
+            Cancelar
+          </v-btn>
+          <v-btn color="red" class="bg-red-600 text-white px-8 text-none font-bold shadow-md" @click="salvarUCs">
+            Salvar Seleção
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

@@ -4,5 +4,6 @@ export declare class CalendarioService {
         ocupacao: number;
         aulas: any[];
     }>;
+    private obterHorasDoPeriodo;
 }
 //# sourceMappingURL=calendario.service.d.ts.map

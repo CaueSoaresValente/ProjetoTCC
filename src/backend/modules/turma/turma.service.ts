@@ -185,9 +185,7 @@ export class TurmaService {
     updateData.aulasSemana = this.contarDiasUnicos(horariosFinais);
     updateData.totalAulas = this.calcularTotalAulas(dataInicioFinal, dataTerminoFinal, horariosFinais);
 
-    await this.repo.update(idTurma, updateData);
-
-    const atualizada = await this.repo.findById(idTurma);
+    const atualizada = await this.repo.update(idTurma, updateData);
     return atualizada ? this.mapTurmaParaCard(atualizada) : null;
   }
 
@@ -234,16 +232,30 @@ export class TurmaService {
     const ucRepo = AppDataSource.getRepository(UnidadeCurricular);
     const resolvidos: { idUC: number; diaSemana: string; periodo: string }[] = [];
 
+    // Buscar nomes de UCs a serem resolvidas em lote
+    const nomesParaBuscar = horarios
+      .filter(h => !h.idUC && h.nomeUC)
+      .map(h => h.nomeUC as string);
+
+    const ucMap = new Map<string, number>();
+    if (nomesParaBuscar.length > 0) {
+      const ucs = await ucRepo.find({
+        where: { nome: In(nomesParaBuscar) }
+      });
+      for (const uc of ucs) {
+        ucMap.set(uc.nome.toLowerCase(), uc.idUC);
+      }
+    }
+
     for (const h of horarios) {
       let idUC = h.idUC;
 
       if (!idUC && h.nomeUC) {
-        // Buscamos a UC pelo nome. Removido o filtro por idArea para permitir UCs de qualquer área.
-        const uc = await ucRepo.findOne({ where: { nome: h.nomeUC } });
-        if (!uc) {
+        const ucNomeLower = h.nomeUC.toLowerCase();
+        idUC = ucMap.get(ucNomeLower);
+        if (!idUC) {
           throw new Error(`Unidade curricular "${h.nomeUC}" não encontrada`);
         }
-        idUC = uc.idUC;
       }
 
       if (!idUC) {
@@ -572,29 +584,31 @@ export class TurmaService {
       }
       if (temConflito) continue;
 
-      // 3. Calcular ocupação e verificar < 80%
+      // 3. Calcular ocupação (em horas) e verificar < 80%
       const profCompleto = await professorRepo.findOne({
         where: { idProfessor: prof.idProfessor },
         relations: [
           'disponibilidades',
           'professorTurmas',
           'professorTurmas.turma',
+          'professorTurmas.turmaUC',
         ],
       });
 
       if (!profCompleto) continue;
 
-      const totalDisponivel = profCompleto.disponibilidades?.length || 0;
-      let periodosAlocados = 0;
+      const totalHorasDisponiveis = (profCompleto.disponibilidades?.length || 0) * 4;
+      let horasAlocadas = 0;
       if (profCompleto.professorTurmas) {
         for (const pt of profCompleto.professorTurmas) {
           if (pt.status && pt.turma?.status) {
-            periodosAlocados += 1;
+            const p = pt.turmaUC?.periodo || 'M01';
+            horasAlocadas += this.obterHorasDoPeriodo(p);
           }
         }
       }
-      const ocupacao = totalDisponivel > 0
-        ? Math.min(Math.round((periodosAlocados / totalDisponivel) * 100), 100)
+      const ocupacao = totalHorasDisponiveis > 0
+        ? Math.min(Math.round((horasAlocadas / totalHorasDisponiveis) * 100), 100)
         : 0;
 
       if (ocupacao >= 80) continue; // Regra 3
@@ -740,5 +754,19 @@ export class TurmaService {
     if (p.startsWith('N') || p === 'NOITE') return ['noite'];
     if (p === 'INT' || p === 'INTEGRAL' || p.startsWith('INT_')) return ['manha', 'tarde'];
     return [periodo.toLowerCase()];
+  }
+
+  private obterHorasDoPeriodo(periodo: string): number {
+    const p = periodo.toUpperCase();
+    if (['M01', 'M02', 'T01', 'T02', 'N01', 'N02'].includes(p)) {
+      return 2;
+    }
+    if (p === 'INT' || p === 'INTEGRAL' || p.startsWith('INT_')) {
+      return 8;
+    }
+    if (p === 'MANHÃ' || p === 'MANHA' || p === 'TARDE' || p === 'NOITE') {
+      return 4;
+    }
+    return 2;
   }
 }

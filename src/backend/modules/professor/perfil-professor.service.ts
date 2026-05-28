@@ -97,51 +97,92 @@ export class PerfilProfessorService {
       })) || [],
 
       // Turmas vinculadas (para o calendário)
-      turmas: prof.professorTurmas?.map(pt => ({
-        idTurma: pt.turma?.idTurma,
-        nome: pt.turma?.nome || '',
-        tipoCurso: pt.turma?.tipoCurso || '',
-        dataInicio: pt.turma?.dataInicio,
-        dataTermino: pt.turma?.dataTermino,
-        // Dias e períodos da turma (para montar o calendário)
-        horarios: pt.turma?.turmaUCs?.map((tuc: any) => ({
-          diaSemana: tuc.diaSemana,
-          periodo: tuc.periodo,
-          uc: tuc.unidadeCurricular?.nome || '',
-        })) || [],
-      })) || [],
+      // Agrupa os slots por turma para facilitar o frontend
+      turmas: this.agruparTurmasPorId(prof.professorTurmas || []),
     };
   }
 
+  // ====================== AGRUPAR TURMAS POR ID ======================
+  // Cada ProfessorTurma representa UM slot alocado (UC + Dia + Período).
+  // Agrupamos por idTurma para o frontend montar o calendário corretamente.
+  private agruparTurmasPorId(professorTurmas: any[]) {
+    const turmasMap = new Map<number, any>();
+
+    for (const pt of professorTurmas) {
+      if (!pt.turma || !pt.turma.status) continue;
+
+      const idTurma = pt.turma.idTurma;
+
+      if (!turmasMap.has(idTurma)) {
+        turmasMap.set(idTurma, {
+          idTurma,
+          nome: pt.turma.nome || '',
+          tipoCurso: pt.turma.tipoCurso || '',
+          dataInicio: pt.turma.dataInicio,
+          dataTermino: pt.turma.dataTermino,
+          horarios: [],
+        });
+      }
+
+      // Adiciona o slot específico do professor
+      if (pt.turmaUC) {
+        turmasMap.get(idTurma)!.horarios.push({
+          diaSemana: pt.turmaUC.diaSemana,
+          periodo: pt.turmaUC.periodo,
+          uc: pt.turmaUC.unidadeCurricular?.nome || '',
+        });
+      }
+    }
+
+    return [...turmasMap.values()];
+  }
+
   // ====================== CALCULAR OCUPAÇÃO ======================
-  // Fórmula: (períodos alocados / períodos disponíveis) * 100
+  // Fórmula: (horas alocadas / horas disponíveis) * 100
+  //
+  // Cada período disponível = 4 horas.
+  // Cada ProfessorTurma alocado tem suas horas de acordo com o sub-período do slot.
   //
   // Exemplo:
-  //   - Professor tem disponibilidade: seg-manhã, seg-tarde, ter-manhã (3 períodos)
-  //   - Professor está em turmas que ocupam: seg-manhã, ter-manhã (2 períodos)
-  //   - Ocupação = (2/3) * 100 = 66.67%
+  //   - Professor tem 3 períodos disponíveis (12 horas)
+  //   - Professor está alocado em 1 slot de 2 horas (M02) e 1 de 4 horas
+  //   - Ocupação = (6 / 12) * 100 = 50%
   private calcularOcupacao(professor: Professor): number {
-    // Total de períodos disponíveis
-    const totalDisponivel = professor.disponibilidades?.length || 0;
+    // Total de horas disponíveis (cada período de disponibilidade = 4 horas)
+    const totalHorasDisponiveis = (professor.disponibilidades?.length || 0) * 4;
 
     // Se não tem disponibilidade cadastrada, retorna 0
-    if (totalDisponivel === 0) {
+    if (totalHorasDisponiveis === 0) {
       return 0;
     }
 
-    // Conta os períodos alocados em turmas
-    // Para cada turma do professor, pega os horários (turma_uc)
-    let periodosAlocados = 0;
+    // Calcula total de horas alocadas
+    let horasAlocadas = 0;
     if (professor.professorTurmas) {
       for (const pt of professor.professorTurmas) {
-        if (pt.turma?.turmaUCs) {
-          periodosAlocados += pt.turma.turmaUCs.length;
+        if (pt.status && pt.turma?.status) {
+          const periodo = pt.turmaUC?.periodo || 'M01'; // Fallback
+          horasAlocadas += this.obterHorasDoPeriodo(periodo);
         }
       }
     }
 
     // Calcula a porcentagem (máximo 100%)
-    const ocupacao = (periodosAlocados / totalDisponivel) * 100;
+    const ocupacao = (horasAlocadas / totalHorasDisponiveis) * 100;
     return Math.min(Math.round(ocupacao), 100);
+  }
+
+  private obterHorasDoPeriodo(periodo: string): number {
+    const p = periodo.toUpperCase();
+    if (['M01', 'M02', 'T01', 'T02', 'N01', 'N02'].includes(p)) {
+      return 2;
+    }
+    if (p === 'INT' || p === 'INTEGRAL' || p.startsWith('INT_')) {
+      return 8;
+    }
+    if (p === 'MANHÃ' || p === 'MANHA' || p === 'TARDE' || p === 'NOITE') {
+      return 4;
+    }
+    return 2; // padrão 2h para qualquer outro sub-período
   }
 }

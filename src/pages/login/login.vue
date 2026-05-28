@@ -227,38 +227,38 @@ async function handleRecovery() {
         </v-card>
       </v-dialog>
     </div>
-  </div>
 
-  <!-- Snackbar de Alertas Premium -->
-  <v-snackbar 
-    v-model="snackbar.show" 
-    :color="snackbar.color" 
-    :timeout="snackbar.timeout" 
-    location="top right" 
-    class="mt-4 mr-4"
-    elevation="24"
-    rounded="xl"
-  >
-    <div class="flex items-start gap-4 p-1">
-      <v-avatar :color="snackbar.color" size="40" class="elevation-3 flex-shrink-0">
-        <v-icon :icon="snackbar.icon" color="white" size="24"></v-icon>
-      </v-avatar>
-      <div class="flex-grow text-white">
-        <p class="text-xs font-black uppercase tracking-widest opacity-70 mb-0.5">Notificação</p>
-        <p class="text-[13px] font-bold leading-tight">{{ snackbar.text }}</p>
+    <!-- Snackbar de Alertas Premium -->
+    <v-snackbar 
+      v-model="snackbar.show" 
+      :color="snackbar.color" 
+      :timeout="snackbar.timeout" 
+      location="top right" 
+      class="mt-4 mr-4"
+      elevation="24"
+      rounded="xl"
+    >
+      <div class="flex items-start gap-4 p-1">
+        <v-avatar :color="snackbar.color" size="40" class="elevation-3 flex-shrink-0">
+          <v-icon :icon="snackbar.icon" color="white" size="24"></v-icon>
+        </v-avatar>
+        <div class="flex-grow text-white">
+          <p class="text-xs font-black uppercase tracking-widest opacity-70 mb-0.5">Notificação</p>
+          <p class="text-[13px] font-bold leading-tight">{{ snackbar.text }}</p>
+        </div>
+        <v-btn icon="mdi-close" variant="text" color="white" @click="snackbar.show = false" size="small" class="opacity-50 hover:opacity-100 transition-opacity"></v-btn>
       </div>
-      <v-btn icon="mdi-close" variant="text" color="white" @click="snackbar.show = false" size="small" class="opacity-50 hover:opacity-100 transition-opacity"></v-btn>
-    </div>
-    
-    <template v-slot:text>
-      <v-progress-linear
-        indeterminate
-        absolute
-        bottom
-        height="3"
-        color="white"
-        class="rounded-b-xl opacity-30"
-      ></v-progress-linear>
-    </template>
-  </v-snackbar>
+      
+      <template v-slot:text>
+        <v-progress-linear
+          indeterminate
+          absolute
+          bottom
+          height="3"
+          color="white"
+          class="rounded-b-xl opacity-30"
+        ></v-progress-linear>
+      </template>
+    </v-snackbar>
+  </div>
 </template>

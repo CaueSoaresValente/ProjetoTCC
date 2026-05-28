@@ -43,7 +43,8 @@ export class PerfilProfessorRepository {
                 'professorAreas.area', // dados da área (nome)
                 'professorTurmas', // turmas vinculadas
                 'professorTurmas.turma', // dados da turma
-                'professorTurmas.turma.turmaUCs', // UCs da turma (para calcular ocupação)
+                'professorTurmas.turmaUC', // slot específico do professor
+                'professorTurmas.turmaUC.unidadeCurricular', // UC do slot
                 'disponibilidades', // disponibilidade semanal
             ],
             order: { idProfessor: 'ASC' },
@@ -93,7 +94,8 @@ export class PerfilProfessorRepository {
                 'professorAreas.area',
                 'professorTurmas',
                 'professorTurmas.turma',
-                'professorTurmas.turma.turmaUCs',
+                'professorTurmas.turmaUC',
+                'professorTurmas.turmaUC.unidadeCurricular',
                 'disponibilidades',
             ],
             order: { idProfessor: 'ASC' },
@@ -116,8 +118,8 @@ export class PerfilProfessorRepository {
                 'disponibilidades', // disponibilidade
                 'professorTurmas', // turmas
                 'professorTurmas.turma', // dados da turma
-                'professorTurmas.turma.turmaUCs', // UCs da turma (calendário)
-                'professorTurmas.turma.turmaUCs.unidadeCurricular', // nome da UC
+                'professorTurmas.turmaUC', // slot específico do professor
+                'professorTurmas.turmaUC.unidadeCurricular', // UC do slot
             ],
         });
     }

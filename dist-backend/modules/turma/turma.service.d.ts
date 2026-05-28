@@ -239,6 +239,7 @@ export declare class TurmaService {
      * de disponibilidade do professor (manha, tarde, noite).
      */
     private mapearPeriodoParaDisponibilidade;
+    private obterHorasDoPeriodo;
 }
 export {};
 //# sourceMappingURL=turma.service.d.ts.map

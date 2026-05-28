@@ -78,6 +78,9 @@ export async function login(email: string, senha: string) {
   localStorage.setItem(TOKEN_KEY, data.token);
   localStorage.setItem(USER_KEY, JSON.stringify(data.usuario));
 
+  // Notifica os componentes (ex: Menu.vue) que o usuário mudou
+  window.dispatchEvent(new Event('usuario-atualizado'));
+
   return data;
 }
 

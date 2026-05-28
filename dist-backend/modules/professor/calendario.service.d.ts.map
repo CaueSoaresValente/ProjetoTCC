@@ -1,1 +1,1 @@
-{"version":3,"file":"calendario.service.d.ts","sourceRoot":"","sources":["../../../src/backend/modules/professor/calendario.service.ts"],"names":[],"mappings":"AAoCA,qBAAa,iBAAiB;IAC5B,OAAO,CAAC,aAAa,CAA0C;IAEzD,eAAe,CAAC,UAAU,EAAE,MAAM;;;;CA0EzC"}
+{"version":3,"file":"calendario.service.d.ts","sourceRoot":"","sources":["../../../src/backend/modules/professor/calendario.service.ts"],"names":[],"mappings":"AAoCA,qBAAa,iBAAiB;IAC5B,OAAO,CAAC,aAAa,CAA0C;IAEzD,eAAe,CAAC,UAAU,EAAE,MAAM;;;;IA4ExC,OAAO,CAAC,mBAAmB;CAa5B"}

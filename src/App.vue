@@ -4,7 +4,7 @@
     <v-main :class="{ 'has-menu': mostrarMenu }">
       <router-view v-slot="{ Component }">
         <v-fade-transition mode="out-in">
-          <component :is="Component" />
+          <component :is="Component" :key="route.fullPath" />
         </v-fade-transition>
       </router-view>
     </v-main>

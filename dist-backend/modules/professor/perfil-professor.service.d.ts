@@ -40,15 +40,10 @@ export declare class PerfilProfessorService {
             diaSemana: string;
             periodo: string;
         }[];
-        turmas: {
-            idTurma: any;
-            nome: any;
-            tipoCurso: any;
-            dataInicio: any;
-            dataTermino: any;
-            horarios: any;
-        }[];
+        turmas: any[];
     } | null>;
+    private agruparTurmasPorId;
     private calcularOcupacao;
+    private obterHorasDoPeriodo;
 }
 //# sourceMappingURL=perfil-professor.service.d.ts.map

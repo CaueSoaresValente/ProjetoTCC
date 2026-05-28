@@ -31,10 +31,19 @@ export class TurmaRepository {
         });
     }
     async findById(idTurma) {
-        return this.repo.findOne({
-            where: { idTurma, status: true },
-            relations: [...RELATIONS],
-        });
+        return this.repo.createQueryBuilder('turma')
+            .leftJoinAndSelect('turma.criador', 'criador')
+            .leftJoinAndSelect('turma.opp', 'opp')
+            .leftJoinAndSelect('opp.cadastro', 'oppCadastro')
+            .leftJoinAndSelect('turma.turmaUCs', 'turmaUCs')
+            .leftJoinAndSelect('turmaUCs.unidadeCurricular', 'unidadeCurricular')
+            .leftJoinAndSelect('unidadeCurricular.area', 'area')
+            .leftJoinAndSelect('turma.professorTurmas', 'professorTurmas')
+            .leftJoinAndSelect('professorTurmas.professor', 'professor')
+            .leftJoinAndSelect('professor.cadastro', 'professorCadastro')
+            .leftJoinAndSelect('professorTurmas.turmaUC', 'turmaUC')
+            .where('turma.idTurma = :idTurma AND turma.status = :status', { idTurma, status: true })
+            .getOne();
     }
     async create(data) {
         const turma = this.repo.create(data);
@@ -51,16 +60,16 @@ export class TurmaRepository {
             ex.diaSemana.toLowerCase() === h.diaSemana.toLowerCase() &&
             ex.periodo === h.periodo));
         if (toDelete.length > 0) {
-            await this.turmaUCRepo.remove(toDelete);
+            await this.turmaUCRepo.delete(toDelete.map(ex => ex.idTurmaUC));
         }
         if (toAdd.length > 0) {
-            const registros = toAdd.map((h) => this.turmaUCRepo.create({
+            const registros = toAdd.map((h) => ({
                 idTurma,
                 idUC: h.idUC,
                 diaSemana: h.diaSemana.toLowerCase(),
                 periodo: h.periodo,
             }));
-            await this.turmaUCRepo.save(registros);
+            await this.turmaUCRepo.insert(registros);
         }
     }
     async update(idTurma, data) {
