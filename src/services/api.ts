@@ -612,6 +612,18 @@ export async function excluirTurma(id: number) {
   });
 }
 
+/**
+ * Atualiza apenas a descrição de uma turma.
+ * @param id - ID da turma
+ * @param descricao - Nova descrição (texto livre)
+ */
+export async function atualizarDescricaoTurma(id: number, descricao: string) {
+  return request(`/api/turmas/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ descricao }),
+  });
+}
+
 // ====================== GESTÃO DE PROFESSORES EM TURMAS ======================
 
 /**

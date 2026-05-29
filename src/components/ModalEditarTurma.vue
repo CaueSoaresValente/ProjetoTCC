@@ -455,7 +455,7 @@ const listaDeProfessores = computed(() => {
   const profs = new Set();
   Object.values(ucsSalvas.value).forEach(ucsNoDia => {
     ucsNoDia.forEach(item => {
-      if (item.professor) profs.add(item.professor);
+      if (item.professor && item.professor !== 'A definir') profs.add(item.professor);
     });
   });
   return Array.from(profs);

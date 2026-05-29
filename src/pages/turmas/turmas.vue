@@ -1,15 +1,16 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import ModalEditarTurma from "@/components/ModalEditarTurma.vue";
-import { listarTurmas, excluirTurma, editarTurma, getUsuarioLogado } from "@/services/api";
+import { listarTurmas, excluirTurma, editarTurma, atualizarDescricaoTurma, listarAreas, getUsuarioLogado } from "@/services/api";
 
 const usuarioLogado = getUsuarioLogado();
 
 const carregando = ref(true);
 const erro = ref("");
 
-const selectedPeriod = ref("Todas");
+const selectedArea = ref("Todas");
 const search = ref("");
+const areasDisponiveis = ref([]);
 
 const modalidadeLabels = {
     tec: "Técnico",
@@ -148,8 +149,13 @@ function formatarErro(mensagem) {
     return mensagem;
 }
 
-onMounted(() => {
+onMounted(async () => {
     carregarTurmas();
+    try {
+        areasDisponiveis.value = await listarAreas();
+    } catch (e) {
+        console.error('Erro ao carregar áreas:', e);
+    }
 });
 
 const periodoDescricoes = {
@@ -167,36 +173,49 @@ const periodoDescricoes = {
 };
 
 const filteredTurmas = computed(() => {
-    // DIDÁTICA: Como 'turmas' agora é uma 'ref', precisamos acessar '.value'
     return turmas.value.filter(turma => {
-        
-        const matchesPeriod = selectedPeriod.value === "Todas" || 
-                            (selectedPeriod.value === "Manhã" && turma.siglas.startsWith('M')) ||
-                            (selectedPeriod.value === "Tarde" && turma.siglas.startsWith('T')) ||
-                            (selectedPeriod.value === "Noite" && turma.siglas.startsWith('N')) ||
-                            (selectedPeriod.value === "Integral" && turma.siglas === 'INT');
+        // Filtro por área selecionada
+        const matchesArea = selectedArea.value === "Todas" || 
+                            turma.areas.some(a => a === selectedArea.value);
 
-       
+        // Filtro por texto de busca
         const term = search.value.trim().toLowerCase();
-        if (term === "") return matchesPeriod;
+        if (term === "") return matchesArea;
 
         const matchesLabel = turma.label.toLowerCase().includes(term);
         const matchesSigla = turma.siglas.toLowerCase().includes(term);
-        
         
         const modLabel = modalidadeLabels[turma.modalidade] || "";
         const matchesModalidade = turma.modalidade.toLowerCase().includes(term) || 
                                  modLabel.toLowerCase().includes(term);
 
-        const matchesAreas = turma.areas.some(area => area.toLowerCase().includes(term));
+        const matchesAreasSearch = turma.areas.some(area => area.toLowerCase().includes(term));
 
-        return matchesPeriod && (matchesLabel || matchesSigla || matchesModalidade || matchesAreas);
+        return matchesArea && (matchesLabel || matchesSigla || matchesModalidade || matchesAreasSearch);
     });
 });
 
 
 
 
+
+// ====================== AUTO-SAVE DESCRIÇÃO ======================
+const descricaoTimers = ref({});
+
+function salvarDescricao(turma) {
+  // Limpa o timer anterior para esta turma (debounce)
+  if (descricaoTimers.value[turma.idTurma]) {
+    clearTimeout(descricaoTimers.value[turma.idTurma]);
+  }
+  // Salva automaticamente após 800ms de inatividade
+  descricaoTimers.value[turma.idTurma] = setTimeout(async () => {
+    try {
+      await atualizarDescricaoTurma(turma.idTurma, turma.descricao || '');
+    } catch (e) {
+      console.error('Erro ao salvar descrição:', e);
+    }
+  }, 800);
+}
 
 </script>
 
@@ -219,33 +238,20 @@ const filteredTurmas = computed(() => {
                     class="max-w-[200px] w-full self-end md:self-center"></v-text-field>
             </div>
 
-            <!-- Abas Estilizadas Premium (Filtro de Período: Todas, Manhã, Tarde, Noite, Integral) -->
+            <!-- Filtro por Área (Dropdown para escalar com muitas áreas) -->
             <div class="flex items-center mt-4 mb-2">
-              <div class="bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl flex flex-wrap gap-1 border border-gray-200 dark:border-gray-700">
-                <button
-                  v-for="p in ['Todas', 'Manhã', 'Tarde', 'Noite', 'Integral']"
-                  :key="p"
-                  class="flex items-center justify-center gap-2 px-5 py-2 rounded-xl font-bold text-sm tracking-wide transition-all duration-300 cursor-pointer select-none"
-                  :class="selectedPeriod === p 
-                    ? 'bg-red-600 text-white scale-[1.01]' 
-                    : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-700/30'"
-                  @click="selectedPeriod = p"
-                >
-                  <!-- Indicador de cor associado ao período (visual premium) -->
-                  <span 
-                    v-if="p !== 'Todas'"
-                    class="w-2.5 h-2.5 rounded-full"
-                    :class="{
-                      'bg-yellow-500': p === 'Manhã',
-                      'bg-orange-500': p === 'Tarde',
-                      'bg-blue-500': p === 'Noite',
-                      'bg-green-500': p === 'Integral'
-                    }"
-                  ></span>
-                  <v-icon v-else icon="mdi-all-inclusive" size="16" :class="selectedPeriod === p ? 'text-white' : 'text-gray-400 dark:text-gray-500'"></v-icon>
-                  {{ p }}
-                </button>
-              </div>
+              <v-select
+                v-model="selectedArea"
+                :items="[{ nome: 'Todas', idArea: null }, ...areasDisponiveis]"
+                item-title="nome"
+                item-value="nome"
+                label="Filtrar por Área"
+                variant="outlined"
+                density="compact"
+                hide-details
+                prepend-inner-icon="mdi-shape-outline"
+                class="max-w-[300px]"
+              ></v-select>
             </div>
             
             <v-fade-transition>
@@ -285,36 +291,37 @@ const filteredTurmas = computed(() => {
         </div>
 
         <!-- Grade de cards ou Estado Vazio -->
-        <div v-if="filteredTurmas.length > 0" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-5">
+        <div v-if="filteredTurmas.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5">
             <v-card v-for="turma in filteredTurmas" :key="turma.value" class="border-t-6 h-full flex flex-col justify-between"
                 :class="{ 'border-green-300': turma.modalidade === 'cai', 'border-blue-300': turma.modalidade === 'fic', 'border-orange-300': turma.modalidade === 'tec' }">
                 <div class="flex-grow">
-                    <v-card-title class="flex justify-between">
-                        <div class="flex items-center">
-                            <span class="text-h5">{{ turma.label }}</span>
+                    <!-- Cabeçalho do Card com fundo sutil da modalidade -->
+                    <div class="px-4 pt-2 pb-2">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-2xl font-bold tracking-tight">{{ turma.label }}</h3>
+                            <div class="flex gap-0.5">
+                                <v-btn icon="mdi-pencil" variant="text"
+                                    @click="abrirEdicao(turma)"
+                                    :class="{ 'text-green-700': turma.modalidade === 'cai', 'text-blue-700': turma.modalidade === 'fic', 'text-orange-700': turma.modalidade === 'tec' }"></v-btn>
+                                <v-btn icon="mdi-delete" variant="text"
+                                    @click="abrirConfirmacaoExclusao(turma)"
+                                    :class="{ 'text-green-700': turma.modalidade === 'cai', 'text-blue-700': turma.modalidade === 'fic', 'text-orange-700': turma.modalidade === 'tec' }"></v-btn>
+                            </div>
                         </div>
-                        <div class="flex">
-                            <v-btn icon="mdi-pencil" variant="text" color="primary"
-                                @click="abrirEdicao(turma)"
-                                :class="{ 'text-green-900': turma.modalidade === 'cai', 'text-blue-900': turma.modalidade === 'fic', 'text-orange-900': turma.modalidade === 'tec' }"></v-btn>
-                            <v-btn icon="mdi-delete" variant="text" color="primary"
-                                @click="abrirConfirmacaoExclusao(turma)"
-                                :class="{ 'text-green-900': turma.modalidade === 'cai', 'text-blue-900': turma.modalidade === 'fic', 'text-orange-900': turma.modalidade === 'tec' }"></v-btn>
+                        <div v-if="turma.areas?.length" class="flex flex-wrap gap-1.5">
+                            <div v-for="area in turma.areas" :key="area"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold"
+                                :class="{
+                                    'bg-green-50 text-green-700 border border-green-200': turma.modalidade === 'cai',
+                                    'bg-blue-50 text-blue-700 border border-blue-200': turma.modalidade === 'fic',
+                                    'bg-orange-50 text-orange-700 border border-orange-200': turma.modalidade === 'tec'
+                                }"
+                            >
+                                <v-icon icon="mdi-shape-outline" size="14"></v-icon>
+                                {{ area }}
+                            </div>
                         </div>
-                    </v-card-title>
-                    <div class="md:hidden">
-                        <v-chip-group class="ms-2 mt-1">
-                            <v-chip v-for="slot in turma.grade" :key="slot.periodo"
-                                variant="tonal" size="small" class="text-red-600!">
-                                {{ slot.periodo }} <v-icon icon="mdi-information-outline" end size="x-small"></v-icon>
-                                <v-tooltip activator="parent" location="top">
-                                    <div class="text-xs p-1">
-                                        <p class="font-bold border-b mb-1">📖 Legenda</p>
-                                        <p>{{ periodoDescricoes[slot.periodo] || 'Período de aula' }}</p>
-                                    </div>
-                                </v-tooltip>
-                            </v-chip>
-                        </v-chip-group>
+                        <p v-else class="text-xs text-gray-400 italic">Sem área vinculada</p>
                     </div>
                     <v-divider :thickness="4" class="my-1 mx-3"></v-divider>
                     <div class="hidden md:flex justify-around gap-2 p-3">
@@ -357,7 +364,14 @@ const filteredTurmas = computed(() => {
                     <p v-else class="mx-3 mb-3 text-sm text-gray-500">Nenhum professor designado</p>
                     <v-divider :thickness="4" class="my-1 mx-3"></v-divider>
                     <p class="ms-3 text-sm my-2 font-bold">Descrição <span class="text-gray-500 font-normal">(Opcional)</span></p>
-                    <v-textarea label="..." rows="4" hide-details class="mx-3 mt-2 text-sm mb-3"></v-textarea>
+                    <v-textarea
+                      v-model="turma.descricao"
+                      label="..."
+                      rows="4"
+                      hide-details
+                      class="mx-3 mt-2 text-sm mb-3"
+                      @update:model-value="salvarDescricao(turma)"
+                    ></v-textarea>
                     <v-divider :thickness="4" class="my-1 mx-3"></v-divider>
 
                     <!-- Grade de Horário Acoplada no Card -->
