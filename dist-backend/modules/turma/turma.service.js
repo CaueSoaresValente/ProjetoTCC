@@ -86,6 +86,7 @@ export class TurmaService {
             dataTermino: new Date(dados.dataTermino),
             aulasSemana: dados.aulasSemana ?? this.contarDiasUnicos(horariosResolvidos),
             totalAulas: dados.totalAulas ?? horariosResolvidos.length,
+            descricao: dados.descricao?.trim() || null,
             status: true,
         });
         await this.repo.saveHorarios(turma.idTurma, horariosResolvidos);
@@ -114,6 +115,8 @@ export class TurmaService {
             updateData.dataTermino = new Date(dados.dataTermino);
         if (dados.idOPP && usuario.funcao === 'gestor')
             updateData.idOPP = dados.idOPP;
+        if (dados.descricao !== undefined)
+            updateData.descricao = dados.descricao?.trim() || null;
         // Se mudou data ou horários, recalculamos aulasSemana e totalAulas
         const dataInicioFinal = dados.dataInicio ? new Date(dados.dataInicio) : turma.dataInicio;
         const dataTerminoFinal = dados.dataTermino ? new Date(dados.dataTermino) : turma.dataTermino;
@@ -262,6 +265,7 @@ export class TurmaService {
             oppNome: turma.opp?.cadastro?.nome || '',
             idOPP: turma.idOPP,
             professores,
+            descricao: turma.descricao || '',
         };
     }
     buildGrade(turma) {

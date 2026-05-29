@@ -34,7 +34,7 @@ export class Turma {
   totalAulas: number;
 
   @Column({ type: 'text', nullable: true })
-  descricao: string;
+  descricao: string | null;
 
   @Column({ type: 'boolean', default: true })
   status: boolean;

@@ -12,6 +12,7 @@ export declare class Turma {
     dataTermino: Date;
     aulasSemana: number;
     totalAulas: number;
+    descricao: string | null;
     status: boolean;
     criador: Cadastro;
     opp: OPP;

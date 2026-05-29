@@ -19,6 +19,7 @@ let Turma = class Turma {
     dataTermino;
     aulasSemana;
     totalAulas;
+    descricao;
     status;
     criador;
     opp;
@@ -52,6 +53,9 @@ __decorate([
 __decorate([
     Column({ name: 'total_aulas', type: 'int', nullable: true })
 ], Turma.prototype, "totalAulas", void 0);
+__decorate([
+    Column({ type: 'text', nullable: true })
+], Turma.prototype, "descricao", void 0);
 __decorate([
     Column({ type: 'boolean', default: true })
 ], Turma.prototype, "status", void 0);
