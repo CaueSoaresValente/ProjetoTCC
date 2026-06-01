@@ -10,6 +10,8 @@
 
 import { AppDataSource } from '../../config/data-source.js';
 import { UnidadeCurricular } from './unidade-curricular.entity.js';
+import { ProfessorUC } from './professor-uc.entity.js';
+import { TurmaUC } from '../turma/turma-uc.entity.js';
 
 export class UnidadeCurricularRepository {
   private repo = AppDataSource.getRepository(UnidadeCurricular);
@@ -17,6 +19,7 @@ export class UnidadeCurricularRepository {
   // Lista todas as competências, trazendo a área de cada uma
   async findAll(): Promise<UnidadeCurricular[]> {
     return await this.repo.find({
+      where: { status: true },
       relations: ['area'],
       order: { nome: 'ASC' },
     });
@@ -25,7 +28,7 @@ export class UnidadeCurricularRepository {
   // Busca uma competência por ID
   async findById(id: number): Promise<UnidadeCurricular | null> {
     return await this.repo.findOne({
-      where: { idUC: id },
+      where: { idUC: id, status: true },
       relations: ['area'],
     });
   }
@@ -42,8 +45,17 @@ export class UnidadeCurricularRepository {
     return await this.findById(id);
   }
 
-  // Exclui uma competência
+  // Exclui uma competência (Soft Delete e remoção de vínculos)
   async delete(id: number): Promise<void> {
-    await this.repo.delete(id);
+    // 1. Soft-delete a UC
+    await this.repo.update(id, { status: false });
+
+    // 2. Remover competências dos professores
+    const profUCRepo = AppDataSource.getRepository(ProfessorUC);
+    await profUCRepo.delete({ idUC: id });
+
+    // 3. Remover slots das turmas (cascata removerá alocações automaticamente)
+    const turmaUCRepo = AppDataSource.getRepository(TurmaUC);
+    await turmaUCRepo.delete({ idUC: id });
   }
 }

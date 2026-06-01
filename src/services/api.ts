@@ -95,6 +95,16 @@ export async function recuperarSenha(email: string) {
 }
 
 /**
+ * Redefine a senha de um usuário após validação de e-mail.
+ */
+export async function resetarSenha(email: string, novaSenha: string) {
+  return request('/api/auth/resetar-senha', {
+    method: 'POST',
+    body: JSON.stringify({ email, novaSenha }),
+  });
+}
+
+/**
  * Faz logout — apaga o token e os dados do navegador.
  */
 export function logout() {

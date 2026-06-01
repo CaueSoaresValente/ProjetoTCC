@@ -144,11 +144,13 @@ export class TurmaService {
 
     await this.verificarPermissao(usuario, turma);
 
-    // Regra 1: Validar que o OPP pertence à Área selecionada
-    const idOPPFinal = dados.idOPP ?? turma.idOPP;
-    const idAreaFinal = dados.idArea ?? turma.turmaUCs?.[0]?.unidadeCurricular?.idArea;
-    if (idAreaFinal && idOPPFinal) {
-      await this.validarOPPPertenceArea(idOPPFinal, idAreaFinal);
+    // Regra 1: Validar que o OPP pertence à Área selecionada (apenas se estiverem sendo alterados)
+    if (dados.idOPP !== undefined || dados.idArea !== undefined) {
+      const idOPPFinal = dados.idOPP ?? turma.idOPP;
+      const idAreaFinal = dados.idArea ?? (turma.turmaUCs?.[0]?.unidadeCurricular?.idArea || null);
+      if (idAreaFinal && idOPPFinal) {
+        await this.validarOPPPertenceArea(idOPPFinal, idAreaFinal);
+      }
     }
 
     const updateData: Partial<Turma> = {};
@@ -278,7 +280,11 @@ export class TurmaService {
   private contarDiasUnicos(
     horarios: { diaSemana: string }[],
   ): number {
-    return new Set(horarios.map((h) => h.diaSemana)).size;
+    return new Set(
+      horarios
+        ?.map((h) => h?.diaSemana?.toLowerCase())
+        .filter(Boolean) || []
+    ).size;
   }
 
   private mapTurmaParaCard(turma: Turma) {
@@ -299,9 +305,7 @@ export class TurmaService {
         profsMap.set(pt.idProfessor, {
           idProfessor: pt.idProfessor,
           nome: pt.professor?.cadastro?.nome || 'Sem nome',
-          foto:
-            pt.professor?.cadastro?.fotoPerfil ||
-            'https://img.freepik.com/fotos-gratis/professor-senior-olhando-camera-contra-chalkboard-com-matematica-exemplo_23-2148200995.jpg?semt=ais_hybrid&w=740&q=80',
+          foto: pt.professor?.cadastro?.fotoPerfil || '',
         });
       }
     }
@@ -435,7 +439,7 @@ export class TurmaService {
   }
 
   private calcularTotalAulas(dataInicio: Date, dataTermino: Date, horarios: { diaSemana: string }[]): number {
-    if (!dataInicio || !dataTermino || !horarios.length) return 0;
+    if (!dataInicio || !dataTermino || !horarios?.length) return 0;
     if (dataInicio > dataTermino) return 0;
 
     const mapaDiasJs: Record<string, number> = {
@@ -449,7 +453,9 @@ export class TurmaService {
 
     const diasSelecionadosJs = [
       ...new Set(
-        horarios.map(h => mapaDiasJs[h.diaSemana.toLowerCase()]).filter(d => d !== undefined)
+        horarios
+          .map(h => h?.diaSemana ? mapaDiasJs[h.diaSemana.toLowerCase()] : undefined)
+          .filter(d => d !== undefined)
       )
     ];
 
@@ -535,6 +541,7 @@ export class TurmaService {
       idProfessor: number;
       nome: string;
       email: string;
+      fotoPerfil: string;
       ocupacao: number;
       nivelCompetencia: number;
       areas: { idArea: number; nome: string }[];
@@ -554,7 +561,7 @@ export class TurmaService {
         where: { idProfessor: prof.idProfessor, diaSemana: diaNorm },
       });
 
-      const temDisponibilidade = disponibilidades.some(d => 
+      const temDisponibilidade = disponibilidades.some(d =>
         periodosDisponiveis.includes(d.periodo.toLowerCase())
       );
       if (!temDisponibilidade) continue;
@@ -621,6 +628,7 @@ export class TurmaService {
         idProfessor: prof.idProfessor,
         nome: prof.cadastro?.nome || 'Sem nome',
         email: prof.cadastro?.email || '',
+        fotoPerfil: prof.cadastro?.fotoPerfil || '',
         ocupacao,
         nivelCompetencia: Number(puc.nivelCompetencia),
         areas: prof.professorAreas?.map(pa => ({

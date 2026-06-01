@@ -18,6 +18,17 @@ const modalidadeLabels = {
     fic: "Formação Inicial e Continuada (FIC)"
 };
 
+function formatarLabel(label) {
+    if (!label) return { nome: "", sufixo: "" };
+    const parts = label.split("-");
+    if (parts.length > 1) {
+        return {
+            nome: parts.slice(0, -1).join("-").trim(),
+            sufixo: parts[parts.length - 1].trim()
+        };
+    }
+    return { nome: label, sufixo: "" };
+}
 
 const diasSemana = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -211,8 +222,10 @@ function salvarDescricao(turma) {
   descricaoTimers.value[turma.idTurma] = setTimeout(async () => {
     try {
       await atualizarDescricaoTurma(turma.idTurma, turma.descricao || '');
+      showAlert("Descrição atualizada com sucesso!", "success", "mdi-check-circle");
     } catch (e) {
       console.error('Erro ao salvar descrição:', e);
+      showAlert("Erro ao salvar descrição: " + (formatarErro(e.message) || "Erro desconhecido"), "error", "mdi-alert-circle");
     }
   }, 800);
 }
@@ -291,20 +304,28 @@ function salvarDescricao(turma) {
         </div>
 
         <!-- Grade de cards ou Estado Vazio -->
-        <div v-if="filteredTurmas.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5">
+        <div v-if="filteredTurmas.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3 gap-5">
             <v-card v-for="turma in filteredTurmas" :key="turma.value" class="border-t-6 h-full flex flex-col justify-between"
                 :class="{ 'border-green-300': turma.modalidade === 'cai', 'border-blue-300': turma.modalidade === 'fic', 'border-orange-300': turma.modalidade === 'tec' }">
                 <div class="flex-grow">
                     <!-- Cabeçalho do Card com fundo sutil da modalidade -->
                     <div class="px-4 pt-2 pb-2">
                         <div class="flex justify-between items-center mb-2">
-                            <h3 class="text-2xl font-bold tracking-tight">{{ turma.label }}</h3>
+                            <div class="flex items-center gap-2 flex-wrap min-w-0 flex-1">
+                                <span class="text-xl font-black text-gray-800 dark:text-gray-100 tracking-tight leading-none truncate">
+                                    {{ formatarLabel(turma.label).nome }}
+                                </span>
+                            </div>
                             <div class="flex gap-0.5">
                                 <v-btn icon="mdi-pencil" variant="text"
                                     @click="abrirEdicao(turma)"
+                                    width="35px"
+                                    height="35px"
                                     :class="{ 'text-green-700': turma.modalidade === 'cai', 'text-blue-700': turma.modalidade === 'fic', 'text-orange-700': turma.modalidade === 'tec' }"></v-btn>
                                 <v-btn icon="mdi-delete" variant="text"
                                     @click="abrirConfirmacaoExclusao(turma)"
+                                    width="35px"
+                                    height="35px"
                                     :class="{ 'text-green-700': turma.modalidade === 'cai', 'text-blue-700': turma.modalidade === 'fic', 'text-orange-700': turma.modalidade === 'tec' }"></v-btn>
                             </div>
                         </div>
@@ -357,7 +378,12 @@ function salvarDescricao(turma) {
                     <p class="ms-3 text-sm my-2 font-bold ">Professores</p>
                     <div v-if="turma.professores?.length" class="flex flex-wrap gap-3 mx-3 mb-3">
                         <div v-for="(prof, idx) in turma.professores" :key="idx" class="flex items-center gap-2">
-                            <v-avatar :image="prof.foto" size="36"></v-avatar>
+                            <v-avatar size="36" class="shadow-sm border border-gray-200 dark:border-gray-700">
+                                <v-img v-if="prof.foto && prof.foto !== 'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_1280.png'" :src="prof.foto" alt="Foto de perfil" cover></v-img>
+                                <div v-else class="w-full h-full flex items-center justify-center font-black text-white bg-gradient-to-br from-green-600 to-green-500 text-sm uppercase">
+                                    {{ prof.nome ? prof.nome.charAt(0).toUpperCase() : "?" }}
+                                </div>
+                            </v-avatar>
                             <p class="font-bold text-sm">{{ prof.nome }}</p>
                         </div>
                     </div>
@@ -366,10 +392,14 @@ function salvarDescricao(turma) {
                     <p class="ms-3 text-sm my-2 font-bold">Descrição <span class="text-gray-500 font-normal">(Opcional)</span></p>
                     <v-textarea
                       v-model="turma.descricao"
-                      label="..."
-                      rows="4"
+                      variant="solo"
+                      density="comfortable"
+                      rows="2"
+                      auto-grow
+                      placeholder="Digite uma descrição para esta turma..."
+                      color="primary"
                       hide-details
-                      class="mx-3 mt-2 text-sm mb-3"
+                      class="mx-3 mt-2 text-xs mb-3 rounded-lg"
                       @update:model-value="salvarDescricao(turma)"
                     ></v-textarea>
                     <v-divider :thickness="4" class="my-1 mx-3"></v-divider>
@@ -698,8 +728,8 @@ function salvarDescricao(turma) {
                 Tem certeza de que deseja excluir <b>{{ confirmDialog.item }}</b>? Esta ação não pode ser desfeita.
             </v-card-text>
             <v-card-actions class="pa-6 pt-0 flex justify-end gap-3">
-                <v-btn variant="text" color="grey-darken-1" class="font-bold px-6 uppercase tracking-wide" @click="confirmDialog.show = false">Cancelar</v-btn>
-                <v-btn variant="elevated" color="white" class="text-gray-800 font-bold px-8 shadow-sm border uppercase tracking-wide" 
+                <v-btn variant="elevated" color="grey-lighten-2" class="font-bold px-6 uppercase tracking-wide text-gray-800" @click="confirmDialog.show = false">Cancelar</v-btn>
+                <v-btn variant="elevated" color="red" class="bg-red-600 text-white font-bold px-8 shadow-sm uppercase tracking-wide" 
                     @click="confirmDialog.onConfirm(); confirmDialog.show = false">Excluir</v-btn>
             </v-card-actions>
         </v-card>

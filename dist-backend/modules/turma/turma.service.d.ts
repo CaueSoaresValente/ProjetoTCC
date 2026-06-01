@@ -156,6 +156,7 @@ export declare class TurmaService {
         idProfessor: number;
         nome: string;
         email: string;
+        fotoPerfil: string;
         ocupacao: number;
         nivelCompetencia: number;
         areas: {

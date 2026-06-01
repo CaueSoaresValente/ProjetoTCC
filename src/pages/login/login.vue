@@ -15,10 +15,10 @@
 
 import { reactive, ref } from "vue";
 import useVuelidate from "@vuelidate/core";
-import { required, email } from "@vuelidate/validators";
+import { required, email, helpers } from "@vuelidate/validators";
 import { useRouter } from "vue-router";
 import Menu from "@/components/Menu.vue";
-import { login as apiLogin, recuperarSenha } from "@/services/api";
+import { login as apiLogin, recuperarSenha, resetarSenha as apiResetarSenha } from "@/services/api";
 
 const router = useRouter();
 
@@ -32,8 +32,11 @@ const state = reactive({
 });
 
 const rules = {
-  password: { required },
-  email: { required, email },
+  password: { required: helpers.withMessage("A senha é obrigatória.", required) },
+  email: { 
+    required: helpers.withMessage("O e-mail é obrigatório.", required), 
+    email: helpers.withMessage("Digite um e-mail em formato válido.", email) 
+  },
 };
 
 const v$ = useVuelidate(rules, state);
@@ -104,29 +107,69 @@ async function submit() {
 const recoveryDialog = ref(false);
 const recoveryEmail = ref("");
 const recoveryLoading = ref(false);
+const recoveryStep = ref(1);
+const newPassword = ref("");
+const confirmPassword = ref("");
+const showRecoveryPassword1 = ref(false);
+const showRecoveryPassword2 = ref(false);
+
+function fecharRecovery() {
+  recoveryDialog.value = false;
+  recoveryStep.value = 1;
+  recoveryEmail.value = "";
+  newPassword.value = "";
+  confirmPassword.value = "";
+  showRecoveryPassword1.value = false;
+  showRecoveryPassword2.value = false;
+}
 
 async function handleRecovery() {
-  if (!recoveryEmail.value) {
-    showAlert("Por favor, insira seu e-mail.", "warning");
-    return;
-  }
-
-  recoveryLoading.value = true;
-  try {
-    // Chama o backend via api.ts (não mais via URL hardcoded!)
-    const data = await recuperarSenha(recoveryEmail.value);
-    if (data.success) {
-      showAlert("Link de recuperação enviado com sucesso!", "success", "mdi-check-circle");
-      recoveryDialog.value = false;
-      recoveryEmail.value = "";
-    } else {
-      showAlert("E-mail não encontrado ou erro ao enviar.", "error", "mdi-alert-octagon");
+  if (recoveryStep.value === 1) {
+    if (!recoveryEmail.value) {
+      showAlert("Por favor, insira seu e-mail.", "warning");
+      return;
     }
-  } catch (error) {
-    console.error("Erro na recuperação:", error);
-    showAlert("Erro ao conectar com o servidor.", "error", "mdi-api-off");
-  } finally {
-    recoveryLoading.value = false;
+
+    recoveryLoading.value = true;
+    try {
+      const data = await recuperarSenha(recoveryEmail.value);
+      if (data.success) {
+        showAlert("E-mail validado! Defina sua nova senha.", "success", "mdi-check-circle");
+        recoveryStep.value = 2;
+      } else {
+        showAlert("E-mail não cadastrado.", "error", "mdi-alert-octagon");
+      }
+    } catch (error) {
+      console.error("Erro na validação do e-mail:", error);
+      showAlert("Erro ao conectar com o servidor.", "error", "mdi-api-off");
+    } finally {
+      recoveryLoading.value = false;
+    }
+  } else if (recoveryStep.value === 2) {
+    if (!newPassword.value || !confirmPassword.value) {
+      showAlert("Preencha os campos de senha.", "warning");
+      return;
+    }
+    if (newPassword.value !== confirmPassword.value) {
+      showAlert("As senhas não coincidem.", "error", "mdi-alert-circle");
+      return;
+    }
+
+    recoveryLoading.value = true;
+    try {
+      const result = await apiResetarSenha(recoveryEmail.value, newPassword.value);
+      if (result.success) {
+        showAlert("Senha redefinida com sucesso!", "success", "mdi-check-circle");
+        fecharRecovery();
+      } else {
+        showAlert(result.message || "Erro ao redefinir senha.", "error", "mdi-alert-octagon");
+      }
+    } catch (error) {
+      console.error("Erro ao redefinir senha:", error);
+      showAlert(error.message || "Erro ao conectar com o servidor.", "error", "mdi-api-off");
+    } finally {
+      recoveryLoading.value = false;
+    }
   }
 }
 </script>
@@ -196,32 +239,81 @@ async function handleRecovery() {
 
       </div>
 
-      <v-dialog v-model="recoveryDialog" max-width="400">
-        <v-card class="bg-gray-100 dark:bg-[#121212] p-2 rounded-lg">
-          <v-card-title class="text-h5">Recuperar Senha</v-card-title>
-          <v-card-text>
-            Insira seu e-mail para receber um link de recuperação.
-            <v-text-field
-              v-model="recoveryEmail"
-              label="E-mail"
-              type="email"
-              class="mt-4"
-              required
-            ></v-text-field>
+      <v-dialog v-model="recoveryDialog" max-width="400" persistent>
+        <v-card class="bg-gray-100 dark:bg-[#121212] pa-4 rounded-xl shadow-2xl">
+          <v-card-title class="text-h5 font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+            <v-icon icon="mdi-lock-reset" color="red"></v-icon>
+            Recuperar Senha
+          </v-card-title>
+          
+          <v-card-text class="mt-2 pa-0">
+            <!-- Passo 1: Digitar E-mail -->
+            <v-window v-model="recoveryStep">
+              <v-window-item :value="1">
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                  Insira o seu e-mail cadastrado para validar sua identidade.
+                </p>
+                <v-text-field
+                  v-model="recoveryEmail"
+                  label="E-mail"
+                  type="email"
+                  variant="outlined"
+                  density="comfortable"
+                  class="mt-4 rounded-lg"
+                  prepend-inner-icon="mdi-email-outline"
+                  color="red"
+                  hide-details
+                ></v-text-field>
+              </v-window-item>
+
+              <!-- Passo 2: Digitar Nova Senha -->
+              <v-window-item :value="2">
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                  E-mail validado! Digite sua nova senha forte.
+                </p>
+                <v-text-field
+                  v-model="newPassword"
+                  label="Nova Senha"
+                  :type="showRecoveryPassword1 ? 'text' : 'password'"
+                  variant="outlined"
+                  density="comfortable"
+                  class="mt-4 rounded-lg"
+                  prepend-inner-icon="mdi-lock-outline"
+                  :append-inner-icon="showRecoveryPassword1 ? 'mdi-eye-off' : 'mdi-eye'"
+                  @click:append-inner="showRecoveryPassword1 = !showRecoveryPassword1"
+                  color="red"
+                  hide-details
+                ></v-text-field>
+                <v-text-field
+                  v-model="confirmPassword"
+                  label="Confirmar Nova Senha"
+                  :type="showRecoveryPassword2 ? 'text' : 'password'"
+                  variant="outlined"
+                  density="comfortable"
+                  class="mt-3 rounded-lg"
+                  prepend-inner-icon="mdi-lock-check-outline"
+                  :append-inner-icon="showRecoveryPassword2 ? 'mdi-eye-off' : 'mdi-eye'"
+                  @click:append-inner="showRecoveryPassword2 = !showRecoveryPassword2"
+                  color="red"
+                  hide-details
+                ></v-text-field>
+              </v-window-item>
+            </v-window>
           </v-card-text>
-          <v-card-actions>
+
+          <v-card-actions class="mt-6 pa-0">
+            <v-btn color="grey-darken-1" variant="text" class="rounded-lg font-bold" @click="fecharRecovery">
+              Cancelar
+            </v-btn>
             <v-spacer></v-spacer>
-            <v-btn color="gray" variant="elevated" @click="recoveryDialog = false"
-              >Cancelar</v-btn
-            >
             <v-btn
-              color="red-darken-1"
-              variant="elevated"
+              color="red"
+              variant="flat"
               @click="handleRecovery"
               :loading="recoveryLoading"
-              class="bg-red-600 text-white"
+              class="bg-red-600 text-white rounded-lg px-6 font-bold"
             >
-              Enviar
+              {{ recoveryStep === 1 ? 'Continuar' : 'Salvar Nova Senha' }}
             </v-btn>
           </v-card-actions>
         </v-card>

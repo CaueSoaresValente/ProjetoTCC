@@ -56,6 +56,7 @@ const calendarioController = new CalendarioController();
 // ====================== ROTAS DE AUTENTICAÇÃO ======================
 app.post('/api/auth/login', (req, res) => authController.login(req, res));
 app.post('/api/auth/recuperar', (req, res) => authController.recuperarSenha(req, res));
+app.post('/api/auth/resetar-senha', (req, res) => authController.redefinirSenha(req, res));
 // ====================== ROTAS DE CADASTRO ======================
 app.get('/api/cadastro', authMiddleware(['gestor']), (req, res) => cadastroController.listAll(req, res));
 app.get('/api/cadastro/:id', authMiddleware(['gestor', 'opp', 'professor']), (req, res) => cadastroController.findById(req, res));
@@ -64,10 +65,10 @@ app.put('/api/cadastro/:id', authMiddleware(['gestor']), (req, res) => cadastroC
 app.delete('/api/cadastro/:id', authMiddleware(['gestor']), (req, res) => cadastroController.delete(req, res));
 // ====================== ROTAS DE ÁREAS ======================
 // Estas rotas permitem gerenciar as áreas (Tecnologia, Manutenção, etc.)
-app.get('/api/areas', (req, res) => areaController.list(req, res));
-app.post('/api/areas', (req, res) => areaController.create(req, res));
-app.put('/api/areas/:id', (req, res) => areaController.update(req, res));
-app.delete('/api/areas/:id', (req, res) => areaController.delete(req, res));
+app.get('/api/areas', authMiddleware(['gestor', 'opp', 'professor']), (req, res) => areaController.list(req, res));
+app.post('/api/areas', authMiddleware(['gestor']), (req, res) => areaController.create(req, res));
+app.put('/api/areas/:id', authMiddleware(['gestor']), (req, res) => areaController.update(req, res));
+app.delete('/api/areas/:id', authMiddleware(['gestor']), (req, res) => areaController.delete(req, res));
 // ====================== ROTAS DE OPP ======================
 app.get('/api/opps', (req, res) => oppController.list(req, res));
 // ====================== ROTAS DE COMPETÊNCIAS (UCs) ======================
@@ -133,5 +134,10 @@ app.delete('/api/turmas/:id/professores/:idProfessor', authMiddleware(['gestor',
 app.get('/api/perfil', authMiddleware(['gestor', 'opp', 'professor']), (req, res) => perfilController.meuPerfil(req, res));
 app.put('/api/perfil', authMiddleware(['gestor', 'opp', 'professor']), (req, res) => perfilController.atualizarPerfil(req, res));
 app.put('/api/perfil/senha', authMiddleware(['gestor', 'opp', 'professor']), (req, res) => perfilController.alterarSenha(req, res));
+// Middleware global de tratamento de erros
+app.use((err, req, res, next) => {
+    console.error("ERRO DO BACKEND:", err);
+    res.status(500).json({ message: err.message || "Erro interno no servidor" });
+});
 export default app;
 //# sourceMappingURL=app.js.map

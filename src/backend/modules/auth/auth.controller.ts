@@ -26,4 +26,17 @@ export class AuthController {
       return res.status(500).json({ message: error.message });
     }
   }
+
+  async redefinirSenha(req: Request, res: Response) {
+    const { email, novaSenha } = req.body;
+    try {
+      const result = await this.authService.redefinirSenha(email, novaSenha);
+      if (!result) {
+        return res.status(404).json({ message: 'E-mail não encontrado' });
+      }
+      return res.status(200).json({ success: true, message: 'Senha redefinida com sucesso' });
+    } catch (error: any) {
+      return res.status(400).json({ message: error.message });
+    }
+  }
 }

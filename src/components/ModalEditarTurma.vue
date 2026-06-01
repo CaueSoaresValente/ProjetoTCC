@@ -96,9 +96,28 @@ function filtrarOpps() {
     return opp.oppAreas && opp.oppAreas.some(oa => oa.idArea === areaId);
   });
   oppsList.value = oppsFiltrados.map(opp => ({
-    label: opp.cadastro.nome,
+    label: opp.cadastro?.nome || "Sem nome",
     value: opp.idOPP
   }));
+
+  // Blindagem Premium: Garante que o OPP atual da turma sempre tenha seu nome exibido (e nunca o ID numérico)
+  if (props.turma?.idOPP) {
+    const jaEstaNaLista = oppsList.value.some(o => o.value === props.turma.idOPP);
+    if (!jaEstaNaLista) {
+      const oppOriginal = todosOpps.value.find(o => o.idOPP === props.turma.idOPP);
+      if (oppOriginal) {
+        oppsList.value.push({
+          label: oppOriginal.cadastro?.nome || "Sem nome",
+          value: oppOriginal.idOPP
+        });
+      } else if (props.turma.oppNome) {
+        oppsList.value.push({
+          label: props.turma.oppNome,
+          value: props.turma.idOPP
+        });
+      }
+    }
+  }
 }
 
 async function carregarUCs() {
@@ -252,7 +271,7 @@ watch(() => props.turma, (newTurma) => {
       label: newTurma.label,
       idArea: newTurma.idArea || null,
       modalidade: newTurma.modalidade,
-      idOPP: null,
+      idOPP: newTurma.idOPP || null,
       dataInicio: newTurma.dataInicioISO || newTurma.dataInicio || "",
       dataFim: newTurma.dataTerminoISO || newTurma.dataFim || "",
       aulasSemana: newTurma.aulasSemana || 4,
@@ -781,8 +800,12 @@ function salvar() {
               <p class="mb-2 font-bold text-xs text-gray-500 uppercase">Professores Adicionados</p>
               <div class="flex flex-wrap gap-2">
                 <v-chip v-for="prof in listaDeProfessores" :key="prof" size="small" color="red" variant="tonal"
-                  class="font-bold" closable @click:close="removerProfessor(prof)">
-                  <v-avatar start icon="mdi-account" color="red-lighten-4"></v-avatar>
+                   class="font-bold" closable @click:close="removerProfessor(prof)">
+                  <v-avatar start class="shadow-sm border border-gray-200">
+                    <div class="w-full h-full flex items-center justify-center font-black text-white bg-gradient-to-br from-green-600 to-green-500 text-[10px] uppercase">
+                      {{ prof ? prof.charAt(0).toUpperCase() : "?" }}
+                    </div>
+                  </v-avatar>
                   {{ prof }}
                 </v-chip>
                 <v-chip v-if="listaDeProfessores.length === 0" size="small" variant="text">Nenhum professor
@@ -1013,10 +1036,10 @@ function salvar() {
         <!-- Botões de Ação - Padronizados -->
         <v-card-actions class="px-6 py-6 pt-2">
           <v-spacer></v-spacer>
-          <v-btn variant="outlined" color="red" class="px-6 text-none font-bold" @click="modalUC = false">
+          <v-btn variant="elevated" color="grey-lighten-2" class="font-bold px-6 text-none text-gray-800" @click="modalUC = false">
             Cancelar
           </v-btn>
-          <v-btn color="red" class="bg-red-600 text-white px-8 text-none font-bold shadow-md" @click="salvarUCs">
+          <v-btn variant="elevated" color="red" class="bg-red-600 text-white px-8 text-none font-bold" @click="salvarUCs">
             Salvar Seleção
           </v-btn>
         </v-card-actions>

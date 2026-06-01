@@ -14,6 +14,22 @@ const turmaSelecionada = ref<any>(null);
 const carregando = ref(false);
 const erro = ref("");
 
+// Notificações Premium (Snackbar)
+const snackbar = ref({
+  show: false,
+  text: "",
+  color: "red",
+  icon: "mdi-alert-circle",
+  timeout: 5000
+});
+
+function showAlert(text: string, color = "red", icon = "mdi-alert-circle") {
+  snackbar.value.text = text;
+  snackbar.value.color = color;
+  snackbar.value.icon = icon;
+  snackbar.value.show = true;
+}
+
 // Slot selecionado na grade
 const slotSelecionado = ref<{
   diaSemana: string;
@@ -198,7 +214,7 @@ async function executarDesignacao() {
 
     await buscarProfessores();
   } catch (e: any) {
-    alert(obterMensagemErro(e));
+    showAlert(obterMensagemErro(e));
   } finally {
     operacaoEmAndamento.value = false;
   }
@@ -221,6 +237,7 @@ async function executarRemocao() {
       professorParaRemover.value.idProfessor || 0
     );
     showRemoveDialog.value = false;
+    showAlert("Professor removido da turma com sucesso!", "success", "mdi-check-circle");
 
     await carregarTurmas();
     turmaSelecionada.value =
@@ -231,7 +248,7 @@ async function executarRemocao() {
     slotSelecionado.value = null;
     professoresElegiveis.value = [];
   } catch (e: any) {
-    alert(obterMensagemErro(e));
+    showAlert(obterMensagemErro(e));
   } finally {
     operacaoEmAndamento.value = false;
   }
@@ -249,6 +266,7 @@ async function desalocarDoSlotAtual() {
       slotSelecionado.value.diaSemana,
       slotSelecionado.value.periodo
     );
+    showAlert("Professor desalocado do slot com sucesso!", "success", "mdi-check-circle");
 
     // Recarregar dados
     await carregarTurmas();
@@ -270,7 +288,7 @@ async function desalocarDoSlotAtual() {
 
     await buscarProfessores();
   } catch (e: any) {
-    alert(obterMensagemErro(e));
+    showAlert(obterMensagemErro(e));
   } finally {
     operacaoEmAndamento.value = false;
   }
@@ -431,7 +449,12 @@ onMounted(() => {
                     })
                   "
                 >
-                  <v-avatar start :image="prof.foto" size="24"></v-avatar>
+                  <v-avatar start class="shadow-sm border border-gray-200">
+                    <v-img v-if="prof.foto && prof.foto !== 'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_1280.png'" :src="prof.foto" cover></v-img>
+                    <div v-else class="w-full h-full flex items-center justify-center font-black text-white bg-gradient-to-br from-green-600 to-green-500 text-[10px] uppercase">
+                      {{ prof.nome ? prof.nome.charAt(0).toUpperCase() : "?" }}
+                    </div>
+                  </v-avatar>
                   {{ prof.nome }}
                 </v-chip>
               </div>
@@ -689,8 +712,11 @@ onMounted(() => {
                   >
                     <v-card-text class="pa-4">
                       <div class="flex items-start gap-3">
-                        <v-avatar color="red-lighten-4" size="44">
-                          <v-icon color="red">mdi-account</v-icon>
+                        <v-avatar size="44" class="shadow-sm border border-gray-200 dark:border-gray-700">
+                          <v-img v-if="prof.fotoPerfil && prof.fotoPerfil !== 'https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_1280.png'" :src="prof.fotoPerfil" alt="Foto de perfil" cover></v-img>
+                          <div v-else class="w-full h-full flex items-center justify-center font-black text-white bg-gradient-to-br from-green-600 to-green-500 text-sm uppercase">
+                            {{ prof.nome ? prof.nome.charAt(0).toUpperCase() : "?" }}
+                          </div>
                         </v-avatar>
                         <div class="flex-1 min-w-0">
                           <p class="font-bold text-sm truncate">
@@ -889,11 +915,44 @@ onMounted(() => {
         Tem certeza de que deseja remover <b>{{ professorParaRemover?.nome }}</b> da turma <b>{{ turmaSelecionada?.label }}</b>?
       </v-card-text>
       <v-card-actions class="pa-6 pt-0 flex justify-end gap-3">
-        <v-btn variant="text" color="grey-darken-1" class="font-bold px-6 uppercase tracking-wide" @click="showRemoveDialog = false">Cancelar</v-btn>
-        <v-btn variant="elevated" color="white" class="text-gray-800 font-bold px-8 shadow-sm border uppercase tracking-wide" :loading="operacaoEmAndamento" @click="executarRemocao">Excluir</v-btn>
+        <v-btn variant="elevated" color="grey-lighten-2" class="font-bold px-6 uppercase tracking-wide text-gray-800" @click="showRemoveDialog = false">Cancelar</v-btn>
+        <v-btn variant="elevated" color="red" class="bg-red-600 text-white font-bold px-8 shadow-sm uppercase tracking-wide" :loading="operacaoEmAndamento" @click="executarRemocao">Excluir</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <!-- Snackbar de Alertas Premium -->
+  <v-snackbar 
+    v-model="snackbar.show" 
+    :color="snackbar.color" 
+    :timeout="snackbar.timeout" 
+    location="top right" 
+    class="mt-4 mr-4"
+    elevation="24"
+    rounded="xl"
+  >
+    <div class="flex items-start gap-4 p-1">
+      <v-avatar :color="snackbar.color" size="40" class="elevation-3 flex-shrink-0">
+        <v-icon :icon="snackbar.icon" color="white" size="24"></v-icon>
+      </v-avatar>
+      <div class="flex-grow text-white">
+        <p class="text-xs font-black uppercase tracking-widest opacity-70 mb-0.5">Notificação</p>
+        <p class="text-[13px] font-bold leading-tight">{{ snackbar.text }}</p>
+      </div>
+      <v-btn icon="mdi-close" variant="text" color="white" @click="snackbar.show = false" size="small" class="opacity-50 hover:opacity-100 transition-opacity"></v-btn>
+    </div>
+    
+    <template v-slot:text>
+      <v-progress-linear
+        indeterminate
+        absolute
+        bottom
+        height="3"
+        color="white"
+        class="rounded-b-xl opacity-30"
+      ></v-progress-linear>
+    </template>
+  </v-snackbar>
   </div>
 </template>
 

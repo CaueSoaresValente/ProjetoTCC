@@ -5,6 +5,7 @@ import { OPP } from '../opp/opp.entity.js';
 import { OPPArea } from '../area/opp-area.entity.js';
 import { Gestor } from '../gestor/gestor.entity.js';
 import { Professor } from '../professor/professor.entity.js';
+import { Turma } from '../turma/turma.entity.js';
 
 export class CadastroService {
   private repo = new CadastroRepository();
@@ -99,6 +100,42 @@ export class CadastroService {
   }
 
   async delete(id: number) {
+    const cadastro = await this.repo.findById(id);
+    if (!cadastro) return;
+
+    if (cadastro.funcao === 'professor') {
+      const profRepo = AppDataSource.getRepository(Professor);
+      const professor = await profRepo.findOne({ where: { idCadastro: id } });
+      if (professor) {
+        // 1. Soft-delete o registro de Professor
+        await profRepo.update(professor.idProfessor, { status: false });
+
+        // 2. Limpar todas as alocações em turmas
+        await AppDataSource.getRepository('professor_turma').delete({ idProfessor: professor.idProfessor });
+
+        // 3. Limpar competências, áreas, disponibilidades e certificações
+        await AppDataSource.getRepository('professor_uc').delete({ idProfessor: professor.idProfessor });
+        await AppDataSource.getRepository('professor_area').delete({ idProfessor: professor.idProfessor });
+        await AppDataSource.getRepository('disponibilidade').delete({ idProfessor: professor.idProfessor });
+        await AppDataSource.getRepository('certificacao').delete({ idProfessor: professor.idProfessor });
+      }
+    } else if (cadastro.funcao === 'opp') {
+      const oppRepo = AppDataSource.getRepository(OPP);
+      const opp = await oppRepo.findOne({ where: { idCadastro: id } });
+      if (opp) {
+        // 1. Soft-delete o registro de OPP
+        await oppRepo.update(opp.idOPP, { status: false });
+
+        // 2. Soft-delete em cascata de todas as turmas deste OPP (idOPP é obrigatório)
+        const turmaRepo = AppDataSource.getRepository(Turma);
+        await turmaRepo.update({ idOPP: opp.idOPP }, { status: false });
+
+        // 3. Limpar vínculos de área do OPP
+        await AppDataSource.getRepository('opp_area').delete({ idOPP: opp.idOPP });
+      }
+    }
+
+    // Por fim, realiza o soft-delete do cadastro
     return await this.repo.delete(id);
   }
 

@@ -22,7 +22,7 @@ export class AreaController {
   // GET /api/areas — Lista todas as áreas
   async list(req: Request, res: Response) {
     try {
-      const areas = await this.service.findAll();
+      const areas = await this.service.findAll((req as any).usuario);
       return res.json(areas);
     } catch (error: any) {
       return res.status(500).json({ message: error.message });

@@ -956,7 +956,7 @@ function isIntegral(periodo) {
               {{ dia.label }}
             </p>
             <v-card variant="outlined"
-              class="rounded-md pa-4 h-[250px] flex flex-col border-gray-300 dark:border-gray-600">
+              class="rounded-md pa-4 h-[270px] flex flex-col border-gray-300 dark:border-gray-600">
               <div class="flex-1">
                 <div v-if="selectedPeriodo[dia.value]" class="flex flex-col items-center">
                   <!-- Se for Manhã -->
@@ -1139,10 +1139,10 @@ function isIntegral(periodo) {
       <!-- Botões de Ação - Padronizados -->
       <v-card-actions class="px-6 py-6 pt-2">
         <v-spacer></v-spacer>
-        <v-btn variant="outlined" color="red" class="px-6 text-none font-bold" @click="fecharModal()">
+        <v-btn variant="elevated" color="grey-lighten-2" class="font-bold px-6 text-none text-gray-800" @click="fecharModal()">
           Cancelar
         </v-btn>
-        <v-btn color="red" class="bg-red-600 text-white px-8 text-none font-bold shadow-md" @click="salvarUCs()">
+        <v-btn variant="elevated" color="red" class="bg-red-600 text-white px-8 text-none font-bold" @click="salvarUCs()">
           Salvar Seleção
         </v-btn>
       </v-card-actions>

@@ -50,5 +50,19 @@ export class AuthService {
         console.log(`🔑 Link de recuperação enviado para: ${email}`);
         return true;
     }
+    async redefinirSenha(email, novaSenha) {
+        const usuario = await this.cadastroRepo.findByEmail(email);
+        if (!usuario)
+            return false;
+        // Valida a força da senha (RN002)
+        const validacao = this.cadastroRepo.validatePasswordStrength(novaSenha);
+        if (!validacao.valid) {
+            throw new Error(validacao.message || 'Senha fraca');
+        }
+        const hashed = await this.cadastroRepo.hashPassword(novaSenha);
+        await this.cadastroRepo.update(usuario.idUsuario, { senha: hashed });
+        console.log(`🔑 Senha do usuário ${email} redefinida com sucesso!`);
+        return true;
+    }
 }
 //# sourceMappingURL=auth.service.js.map

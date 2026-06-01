@@ -5,14 +5,23 @@
  */
 
 import { createVuetify } from 'vuetify'
+import { pt } from 'vuetify/locale'
 import '@mdi/font/css/materialdesignicons.css'
 import '../styles/layers.css'
 import 'vuetify/styles'
 
 export default createVuetify({
+  locale: {
+    locale: 'pt',
+    fallback: 'pt',
+    messages: { pt },
+  },
   defaults: {
     VChip: {
       rounded: '0',
+    },
+    VBtn: {
+      variant: 'elevated',
     },
   },
   theme: {

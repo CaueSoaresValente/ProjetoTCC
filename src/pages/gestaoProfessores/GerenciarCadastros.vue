@@ -362,8 +362,8 @@ onMounted(() => {
         Tem certeza de que deseja excluir o usuário <b>{{ usuarioDeletando?.nome }}</b>? Esta ação não pode ser desfeita.
       </v-card-text>
       <v-card-actions class="pa-6 pt-0 flex justify-end gap-3">
-        <v-btn color="grey-darken-1" variant="text" class="font-bold px-6 uppercase tracking-wide" @click="dialogDelete = false">Cancelar</v-btn>
-        <v-btn variant="elevated" color="white" class="text-gray-800 font-bold px-8 shadow-sm border uppercase tracking-wide" @click="confirmarDelete">Excluir</v-btn>
+        <v-btn variant="elevated" color="grey-lighten-2" class="font-bold px-6 uppercase tracking-wide text-gray-800" @click="dialogDelete = false">Cancelar</v-btn>
+        <v-btn variant="elevated" color="red" class="bg-red-600 text-white font-bold px-8 shadow-sm uppercase tracking-wide" @click="confirmarDelete">Excluir</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
