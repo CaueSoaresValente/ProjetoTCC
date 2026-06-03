@@ -188,14 +188,30 @@ const normalizarDia = (dia: string): string => {
 };
 
 // Normaliza o período da turma_uc (M01, T01, N01, INT, etc.)
-// para o período do calendário (manha, tarde, noite)
-const normalizarPeriodo = (periodo: string): string => {
+// para um array de períodos do calendário (manha, tarde, noite)
+const normalizarPeriodos = (periodo: string): string[] => {
+  if (!periodo) return [];
   const p = periodo.toUpperCase();
-  if (p.startsWith('M') || p === 'MANHÃ' || p === 'MANHA') return 'manha';
-  if (p.startsWith('T') || p === 'TARDE') return 'tarde';
-  if (p.startsWith('N') || p === 'NOITE') return 'noite';
-  if (p === 'INT' || p === 'INTEGRAL' || p.startsWith('INT_')) return 'manha'; // integral cai em manhã
-  return periodo.toLowerCase();
+
+  if (p.includes('MANHÃ + TARDE') || p.includes('MANHA + TARDE') || p === 'INT_MT') {
+    return ['manha', 'tarde'];
+  }
+  if (p.includes('MANHÃ + NOITE') || p.includes('MANHA + NOITE') || p === 'INT_MN') {
+    return ['manha', 'noite'];
+  }
+  if (p.includes('TARDE + NOITE') || p === 'INT_TN') {
+    return ['tarde', 'noite'];
+  }
+  if (p === 'INT' || p === 'INTEGRAL' || p.startsWith('INT_')) {
+    return ['manha', 'tarde']; // fallback para integral legado
+  }
+
+  const arr = [];
+  if (p.startsWith('M') || p === 'MANHÃ' || p === 'MANHA') arr.push('manha');
+  if (p.startsWith('T') || p === 'TARDE') arr.push('tarde');
+  if (p.startsWith('N') || p === 'NOITE') arr.push('noite');
+
+  return arr.length > 0 ? arr : [periodo.toLowerCase()];
 };
 
 // Busca a turma que o professor tem em determinado dia/período
@@ -204,11 +220,11 @@ const getTurmaCalendario = (dia: string, periodo: string) => {
 
   for (const turma of perfilSelecionado.value.turmas) {
     for (const horario of turma.horarios) {
-      if (
-        normalizarDia(horario.diaSemana) === normalizarDia(dia) &&
-        normalizarPeriodo(horario.periodo) === periodo.toLowerCase()
-      ) {
-        return { nomeTurma: turma.nome, nomeUC: horario.uc };
+      if (normalizarDia(horario.diaSemana) === normalizarDia(dia)) {
+        const periodosDaAula = normalizarPeriodos(horario.periodo);
+        if (periodosDaAula.includes(periodo.toLowerCase())) {
+          return { nomeTurma: turma.nome, nomeUC: horario.uc };
+        }
       }
     }
   }
