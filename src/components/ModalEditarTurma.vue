@@ -290,19 +290,24 @@ watch(() => props.turma, (newTurma) => {
           const diaKey = diaMap[dia];
           if (diaKey) {
             // Mapeia os sub-tipos de integral corretamente
-            if (p === 'INT_MT' || p === 'INT_MN' || p === 'INT_TN') {
-              selectedPeriodo.value[diaKey] = p;
-            } else if (p === 'Manhã + Tarde') {
+            const pNorm = p.trim();
+            if (pNorm === 'INT_MT' || pNorm === 'INT_MN' || pNorm === 'INT_TN') {
+              selectedPeriodo.value[diaKey] = pNorm;
+            } else if (pLower.includes('manhã + tarde') || pLower.includes('manha + tarde')) {
               selectedPeriodo.value[diaKey] = 'INT_MT';
-            } else if (p === 'Manhã + Noite') {
+            } else if (pLower.includes('manhã + noite') || pLower.includes('manha + noite')) {
               selectedPeriodo.value[diaKey] = 'INT_MN';
-            } else if (p === 'Tarde + Noite') {
+            } else if (pLower.includes('tarde + noite')) {
               selectedPeriodo.value[diaKey] = 'INT_TN';
-            } else if (pLower.includes('integral') || p === 'INT') {
+            } else if (pLower.includes('integral') || pNorm === 'INT') {
               selectedPeriodo.value[diaKey] = 'INT_MT'; // Integral padrão = Manhã+Tarde
-            } else if (pLower.startsWith('m')) selectedPeriodo.value[diaKey] = 'manha';
-            else if (pLower.startsWith('t')) selectedPeriodo.value[diaKey] = 'tarde';
-            else if (pLower.startsWith('n')) selectedPeriodo.value[diaKey] = 'noite';
+            } else if (pLower.startsWith('m')) {
+              selectedPeriodo.value[diaKey] = 'manha';
+            } else if (pLower.startsWith('t')) {
+              selectedPeriodo.value[diaKey] = 'tarde';
+            } else if (pLower.startsWith('n')) {
+              selectedPeriodo.value[diaKey] = 'noite';
+            }
 
             if (!ucsSalvas.value[diaKey].some(item => item.idUC === slot.aulas[dia].idUC && item.periodo === slot.periodo)) {
               ucsSalvas.value[diaKey].push({ 
