@@ -292,6 +292,12 @@ watch(() => props.turma, (newTurma) => {
             // Mapeia os sub-tipos de integral corretamente
             if (p === 'INT_MT' || p === 'INT_MN' || p === 'INT_TN') {
               selectedPeriodo.value[diaKey] = p;
+            } else if (p === 'Manhã + Tarde') {
+              selectedPeriodo.value[diaKey] = 'INT_MT';
+            } else if (p === 'Manhã + Noite') {
+              selectedPeriodo.value[diaKey] = 'INT_MN';
+            } else if (p === 'Tarde + Noite') {
+              selectedPeriodo.value[diaKey] = 'INT_TN';
             } else if (pLower.includes('integral') || p === 'INT') {
               selectedPeriodo.value[diaKey] = 'INT_MT'; // Integral padrão = Manhã+Tarde
             } else if (pLower.startsWith('m')) selectedPeriodo.value[diaKey] = 'manha';
