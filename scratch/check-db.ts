@@ -7,7 +7,7 @@ async function check() {
   try {
     await AppDataSource.initialize();
     console.log('--- RELATÓRIO DE BANCO DE DADOS ---');
-    
+
     const areaRepo = AppDataSource.getRepository(Area);
     const areas = await areaRepo.find();
     console.log(`Áreas cadastradas no sistema: ${areas.length}`);

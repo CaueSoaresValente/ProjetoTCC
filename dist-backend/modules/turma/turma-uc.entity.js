@@ -29,7 +29,7 @@ __decorate([
     Column({ name: 'dia_semana', type: 'varchar', length: 20 })
 ], TurmaUC.prototype, "diaSemana", void 0);
 __decorate([
-    Column({ type: 'varchar', length: 10 })
+    Column({ type: 'varchar', length: 30 })
 ], TurmaUC.prototype, "periodo", void 0);
 __decorate([
     ManyToOne(() => Turma, (turma) => turma.turmaUCs, { onDelete: 'CASCADE' }),
