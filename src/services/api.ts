@@ -147,6 +147,14 @@ export function estaLogado(): boolean {
   return !!localStorage.getItem(TOKEN_KEY);
 }
 
+/**
+ * Verifica se a sessão do usuário ainda é válida (perfil ativo no banco).
+ * Retorna { ativo: true } ou { ativo: false, motivo: 'perfil_excluido' }.
+ */
+export async function verificarSessao() {
+  return request('/api/auth/session-check');
+}
+
 // ============================================================
 // CADASTRO — Criar novo usuário
 // ============================================================

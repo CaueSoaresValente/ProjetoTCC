@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
+import { CadastroRepository } from '../cadastro/cadastro.repository.js';
 
 export class AuthController {
   private authService = new AuthService();
+  private cadastroRepo = new CadastroRepository();
 
   async login(req: Request, res: Response) {
     const { email, senha } = req.body;
@@ -61,6 +63,24 @@ export class AuthController {
       return res.status(200).json({ success: true, message: 'Senha redefinida com sucesso' });
     } catch (error: any) {
       return res.status(400).json({ message: error.message });
+    }
+  }
+
+  // ============================================================
+  // VERIFICAÇÃO DE SESSÃO — Checa se o perfil ainda está ativo
+  // ============================================================
+  async checkSession(req: Request, res: Response) {
+    try {
+      const usuario = (req as any).usuario;
+      const cadastro = await this.cadastroRepo.findById(usuario.idUsuario);
+
+      if (!cadastro || !cadastro.status) {
+        return res.status(200).json({ ativo: false, motivo: 'perfil_excluido' });
+      }
+
+      return res.status(200).json({ ativo: true });
+    } catch (error: any) {
+      return res.status(500).json({ message: error.message });
     }
   }
 }
