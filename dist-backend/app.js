@@ -55,8 +55,10 @@ const turmaController = new TurmaController();
 const calendarioController = new CalendarioController();
 // ====================== ROTAS DE AUTENTICAÇÃO ======================
 app.post('/api/auth/login', (req, res) => authController.login(req, res));
+app.post('/api/auth/google', (req, res) => authController.loginGoogle(req, res));
 app.post('/api/auth/recuperar', (req, res) => authController.recuperarSenha(req, res));
 app.post('/api/auth/resetar-senha', (req, res) => authController.redefinirSenha(req, res));
+app.get('/api/auth/session-check', authMiddleware(['gestor', 'opp', 'professor']), (req, res) => authController.checkSession(req, res));
 // ====================== ROTAS DE CADASTRO ======================
 app.get('/api/cadastro', authMiddleware(['gestor']), (req, res) => cadastroController.listAll(req, res));
 app.get('/api/cadastro/:id', authMiddleware(['gestor', 'opp', 'professor']), (req, res) => cadastroController.findById(req, res));

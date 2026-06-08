@@ -153,7 +153,7 @@ export class PerfilProfessorService {
         if (['M01', 'M02', 'T01', 'T02', 'N01', 'N02'].includes(p)) {
             return 2;
         }
-        if (p === 'INT' || p === 'INTEGRAL' || p.startsWith('INT_')) {
+        if (p === 'INT' || p === 'INTEGRAL' || p.startsWith('INT_') || p.includes('MANHÃ + TARDE') || p.includes('MANHA + TARDE') || p.includes('MANHÃ + NOITE') || p.includes('MANHA + NOITE') || p.includes('TARDE + NOITE')) {
             return 8;
         }
         if (p === 'MANHÃ' || p === 'MANHA' || p === 'TARDE' || p === 'NOITE') {

@@ -37,8 +37,8 @@ export class PerfilService {
             updateData.nome = dados.nome.trim();
         }
         if (dados.email && dados.email.trim()) {
-            // Verifica se o novo e-mail já não está em uso por outro usuário
-            const existente = await this.repo.findOne({ where: { email: dados.email.trim() } });
+            // Verifica se o novo e-mail já não está em uso por outro usuário ATIVO
+            const existente = await this.repo.findOne({ where: { email: dados.email.trim(), status: true } });
             if (existente && existente.idUsuario !== idUsuario) {
                 throw new Error('Este e-mail já está em uso por outro cadastro.');
             }

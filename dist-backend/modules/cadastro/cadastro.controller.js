@@ -43,7 +43,12 @@ export class CadastroController {
     }
     async delete(req, res) {
         try {
-            await this.service.delete(Number(req.params.id));
+            const usuarioLogado = req.usuario;
+            const idUsuarioParaDeletar = Number(req.params.id);
+            if (usuarioLogado && usuarioLogado.idUsuario === idUsuarioParaDeletar) {
+                return res.status(400).json({ message: "Você não pode excluir seu próprio perfil que está em uso no momento." });
+            }
+            await this.service.delete(idUsuarioParaDeletar);
             return res.status(204).send();
         }
         catch (error) {
