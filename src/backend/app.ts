@@ -61,6 +61,7 @@ const calendarioController = new CalendarioController();
 
 // ====================== ROTAS DE AUTENTICAÇÃO ======================
 app.post('/api/auth/login', (req, res) => authController.login(req, res));
+app.post('/api/auth/google', (req, res) => authController.loginGoogle(req, res));
 app.post('/api/auth/recuperar', (req, res) => authController.recuperarSenha(req, res));
 app.post('/api/auth/resetar-senha', (req, res) => authController.redefinirSenha(req, res));
 

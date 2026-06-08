@@ -85,6 +85,26 @@ export async function login(email: string, senha: string) {
 }
 
 /**
+ * Faz login usando o credential do Google Identity Services.
+ * O backend verifica o token, busca o papel na tabela cadastro, e retorna o JWT interno.
+ */
+export async function loginWithGoogle(credential: string) {
+  const data = await request('/api/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential }),
+  });
+
+  // Salva o token e o usuário no navegador (mesmo fluxo do login normal)
+  localStorage.setItem(TOKEN_KEY, data.token);
+  localStorage.setItem(USER_KEY, JSON.stringify(data.usuario));
+
+  // Notifica os componentes (ex: Menu.vue) que o usuário mudou
+  window.dispatchEvent(new Event('usuario-atualizado'));
+
+  return data;
+}
+
+/**
  * Solicita recuperação de senha por e-mail.
  */
 export async function recuperarSenha(email: string) {

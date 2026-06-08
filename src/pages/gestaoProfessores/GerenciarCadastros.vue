@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import { listarCadastros, excluirCadastro, editarCadastro, criarCadastro, listarAreas } from "@/services/api";
+import { listarCadastros, excluirCadastro, editarCadastro, criarCadastro, listarAreas, getUsuarioLogado } from "@/services/api";
 
 // ====================== ESTADO DA TELA ======================
 const tags = ["Professor", "Gestor", "OPP"];
@@ -176,6 +176,11 @@ async function salvarEdicao() {
 }
 
 function abrirDeletar(user) {
+  const usuarioLogado = getUsuarioLogado();
+  if (usuarioLogado && usuarioLogado.idUsuario === user.idUsuario) {
+    mostrarMensagem("Você não pode excluir seu próprio perfil que está em uso no momento.", "error");
+    return;
+  }
   usuarioDeletando.value = user;
   dialogDelete.value = true;
 }
@@ -187,7 +192,7 @@ async function confirmarDelete() {
     await carregarUsuarios();
     mostrarMensagem("Cadastro excluído com sucesso!");
   } catch (error) {
-    mostrarMensagem("Erro ao excluir: Ocorreu um problema ao remover o usuário.", "error");
+    mostrarMensagem("Erro ao excluir: " + (error.message || "Ocorreu um problema ao remover o usuário."), "error");
   }
 }
 

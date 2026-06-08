@@ -17,6 +17,30 @@ export class AuthController {
     }
   }
 
+  // ============================================================
+  // LOGIN COM GOOGLE — Recebe o credential e valida no backend
+  // ============================================================
+  async loginGoogle(req: Request, res: Response) {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ message: 'Credential do Google não fornecido' });
+    }
+
+    try {
+      const result = await this.authService.loginWithGoogle(credential);
+      if (!result) {
+        return res.status(401).json({
+          message: 'Este e-mail não está cadastrado no sistema. Solicite acesso ao gestor.',
+        });
+      }
+      return res.status(200).json(result);
+    } catch (error: any) {
+      console.error('[GOOGLE LOGIN CONTROLLER] Erro:', error.message);
+      return res.status(500).json({ message: error.message });
+    }
+  }
+
   async recuperarSenha(req: Request, res: Response) {
     const { email } = req.body;
     try {

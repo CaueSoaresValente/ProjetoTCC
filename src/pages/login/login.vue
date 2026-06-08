@@ -13,12 +13,12 @@
 // 8. Redirecionamos o usuário para a página principal
 // ============================================================
 
-import { reactive, ref } from "vue";
+import { reactive, ref, onMounted } from "vue";
 import useVuelidate from "@vuelidate/core";
 import { required, email, helpers } from "@vuelidate/validators";
 import { useRouter } from "vue-router";
 import Menu from "@/components/Menu.vue";
-import { login as apiLogin, recuperarSenha, resetarSenha as apiResetarSenha } from "@/services/api";
+import { login as apiLogin, loginWithGoogle as apiLoginGoogle, recuperarSenha, resetarSenha as apiResetarSenha } from "@/services/api";
 
 const router = useRouter();
 
@@ -59,11 +59,25 @@ function showAlert(text, color = "red", icon = "mdi-alert-circle") {
 
 const loginError = ref("");
 const loginLoading = ref(false);
+const googleLoading = ref(false);
 
 function clear() {
   v$.value.$reset();
   loginError.value = "";
   Object.assign(state, initialState);
+}
+
+// ============================================================
+// Redireciona baseado na função do usuário
+// ============================================================
+function redirectByRole(funcao) {
+  if (funcao === "gestor" || funcao === "opp") {
+    router.push("/turmas");
+  } else if (funcao === "professor") {
+    router.push("/calendarioprof");
+  } else {
+    router.push("/turmas");
+  }
 }
 
 // ============================================================
@@ -85,14 +99,7 @@ async function submit() {
     console.log("✅ Login bem-sucedido:", data.usuario.nome);
 
     // Redireciona para a página principal baseado no perfil
-    const funcao = data.usuario.funcao;
-    if (funcao === "gestor" || funcao === "opp") {
-      router.push("/turmas");
-    } else if (funcao === "professor") {
-      router.push("/calendarioprof");
-    } else {
-      router.push("/turmas");
-    }
+    redirectByRole(data.usuario.funcao);
   } catch (error) {
     console.error("❌ Erro no login:", error);
     loginError.value = "E-mail ou senha incorretos.";
@@ -100,6 +107,58 @@ async function submit() {
     loginLoading.value = false;
   }
 }
+
+// ============================================================
+// LOGIN COM GOOGLE — Google Identity Services
+// ============================================================
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+
+async function handleGoogleCredential(response) {
+  googleLoading.value = true;
+  loginError.value = "";
+
+  try {
+    const data = await apiLoginGoogle(response.credential);
+    console.log("✅ Login Google bem-sucedido:", data.usuario.nome);
+    redirectByRole(data.usuario.funcao);
+  } catch (error) {
+    console.error("❌ Erro no login Google:", error);
+    loginError.value = error.message || "Erro ao fazer login com Google.";
+  } finally {
+    googleLoading.value = false;
+  }
+}
+
+onMounted(() => {
+  // Aguarda o script do Google carregar
+  const initGoogle = () => {
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+        auto_select: false,
+      });
+
+      // Renderiza o botão oficial do Google
+      const btnContainer = document.getElementById("google-signin-btn");
+      if (btnContainer) {
+        window.google.accounts.id.renderButton(btnContainer, {
+          theme: "outline",
+          size: "large",
+          width: "100%",
+          text: "signin_with",
+          shape: "rectangular",
+          logo_alignment: "left",
+        });
+      }
+    } else {
+      // Tenta novamente em 200ms se o script ainda não carregou
+      setTimeout(initGoogle, 200);
+    }
+  };
+
+  initGoogle();
+});
 
 // ============================================================
 // RECUPERAÇÃO DE SENHA
@@ -236,6 +295,25 @@ async function handleRecovery() {
           </div>
         </form>
 
+        <!-- Divisor "ou" -->
+        <div class="flex items-center gap-3 my-2">
+          <div class="flex-grow h-px bg-gray-300 dark:bg-gray-600"></div>
+          <span class="text-sm text-gray-500 dark:text-gray-400 font-medium">ou</span>
+          <div class="flex-grow h-px bg-gray-300 dark:bg-gray-600"></div>
+        </div>
+
+        <!-- Botão Google Sign-In (renderizado pelo Google Identity Services) -->
+        <div class="flex justify-center">
+          <div id="google-signin-btn" style="min-height: 44px;"></div>
+        </div>
+
+        <!-- Loading overlay para login Google -->
+        <v-progress-linear
+          v-if="googleLoading"
+          indeterminate
+          color="red"
+          class="rounded-lg"
+        ></v-progress-linear>
 
       </div>
 
@@ -354,3 +432,4 @@ async function handleRecovery() {
     </v-snackbar>
   </div>
 </template>
+

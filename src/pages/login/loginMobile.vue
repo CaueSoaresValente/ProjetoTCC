@@ -1,8 +1,11 @@
 <script setup>
-import { reactive, ref } from "vue";
+import { reactive, ref, onMounted } from "vue";
 import useVuelidate from "@vuelidate/core";
 import { required, email, helpers } from "@vuelidate/validators";
-import { recuperarSenha, resetarSenha as apiResetarSenha } from "@/services/api";
+import { useRouter } from "vue-router";
+import { login as apiLogin, loginWithGoogle as apiLoginGoogle, recuperarSenha, resetarSenha as apiResetarSenha } from "@/services/api";
+
+const router = useRouter();
 
 const initialState = {
   password: "",
@@ -39,20 +42,102 @@ function showAlert(text, color = "red", icon = "mdi-alert-circle") {
   snackbar.value.show = true;
 }
 
+const loginError = ref("");
+const loginLoading = ref(false);
+const googleLoading = ref(false);
+
 function clear() {
   v$.value.$reset();
+  loginError.value = "";
   Object.assign(state, initialState);
+}
+
+// ============================================================
+// Redireciona baseado na função do usuário
+// ============================================================
+function redirectByRole(funcao) {
+  if (funcao === "gestor" || funcao === "opp") {
+    router.push("/turmas");
+  } else if (funcao === "professor") {
+    router.push("/calendarioprof");
+  } else {
+    router.push("/turmas");
+  }
 }
 
 async function submit() {
   const isValid = await v$.value.$validate();
   if (!isValid) {
-    console.log("Formulário inválido");
     return;
   }
-  console.log("Formulário válido", state);
+
+  loginLoading.value = true;
+  loginError.value = "";
+
+  try {
+    const data = await apiLogin(state.email, state.password);
+    console.log("✅ Login bem-sucedido:", data.usuario.nome);
+    redirectByRole(data.usuario.funcao);
+  } catch (error) {
+    console.error("❌ Erro no login:", error);
+    loginError.value = "E-mail ou senha incorretos.";
+  } finally {
+    loginLoading.value = false;
+  }
 }
 
+// ============================================================
+// LOGIN COM GOOGLE — Google Identity Services
+// ============================================================
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+
+async function handleGoogleCredential(response) {
+  googleLoading.value = true;
+  loginError.value = "";
+
+  try {
+    const data = await apiLoginGoogle(response.credential);
+    console.log("✅ Login Google bem-sucedido:", data.usuario.nome);
+    redirectByRole(data.usuario.funcao);
+  } catch (error) {
+    console.error("❌ Erro no login Google:", error);
+    loginError.value = error.message || "Erro ao fazer login com Google.";
+  } finally {
+    googleLoading.value = false;
+  }
+}
+
+onMounted(() => {
+  const initGoogle = () => {
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+        auto_select: false,
+      });
+
+      const btnContainer = document.getElementById("google-signin-btn-mobile");
+      if (btnContainer) {
+        window.google.accounts.id.renderButton(btnContainer, {
+          theme: "outline",
+          size: "large",
+          width: "100%",
+          text: "signin_with",
+          shape: "rectangular",
+          logo_alignment: "left",
+        });
+      }
+    } else {
+      setTimeout(initGoogle, 200);
+    }
+  };
+
+  initGoogle();
+});
+
+// ============================================================
+// RECUPERAÇÃO DE SENHA
+// ============================================================
 const recoveryDialog = ref(false);
 const recoveryEmail = ref("");
 const recoveryLoading = ref(false);
@@ -128,6 +213,18 @@ async function handleRecovery() {
     <div class="flex m-3 flex-col md:hidden space-y-3 bg-gray-100 p-8 dark:bg-[#121212] rounded shadow-lg main">
       <h2 class="text-center font-bold text-2xl">Bem-vindo</h2>
 
+      <!-- Mensagem de erro do login -->
+      <v-alert
+        v-if="loginError"
+        type="error"
+        variant="tonal"
+        closable
+        density="compact"
+        @click:close="loginError = ''"
+      >
+        {{ loginError }}
+      </v-alert>
+
       <form @submit.prevent="submit">
         <v-text-field v-model="state.email" :error-messages="v$.email.$errors.map((e) => e.$message)" label="E-mail"
           required @blur="v$.email.$touch()" @input="v$.email.$touch()" />
@@ -135,12 +232,12 @@ async function handleRecovery() {
         <v-text-field v-model="state.password" :error-messages="v$.password.$errors.map((e) => e.$message)" label="Senha"
           type="password" required @blur="v$.password.$touch()" @input="v$.password.$touch()" />
 
-        <v-btn type="submit" class="mt-4 me-4 bg-red-500 text-white">
-          submit
+        <v-btn type="submit" class="mt-4 me-4 bg-red-500 text-white" :loading="loginLoading">
+          Entrar
         </v-btn>
 
         <v-btn @click="clear" class="mt-4">
-          clear
+          Limpar
         </v-btn>
 
         <div class="mt-4 text-right">
@@ -149,6 +246,26 @@ async function handleRecovery() {
           </a>
         </div>
       </form>
+
+      <!-- Divisor "ou" -->
+      <div class="flex items-center gap-3 my-2">
+        <div class="flex-grow h-px bg-gray-300 dark:bg-gray-600"></div>
+        <span class="text-sm text-gray-500 dark:text-gray-400 font-medium">ou</span>
+        <div class="flex-grow h-px bg-gray-300 dark:bg-gray-600"></div>
+      </div>
+
+      <!-- Botão Google Sign-In Mobile -->
+      <div class="flex justify-center">
+        <div id="google-signin-btn-mobile" style="min-height: 44px;"></div>
+      </div>
+
+      <!-- Loading overlay para login Google -->
+      <v-progress-linear
+        v-if="googleLoading"
+        indeterminate
+        color="red"
+        class="rounded-lg"
+      ></v-progress-linear>
     </div>
 
     <!-- Dialog de Recuperação de Senha Mobile (2 passos) -->
@@ -260,4 +377,4 @@ async function handleRecovery() {
     margin-left: 25px;
   }
 }
-</style>
+</style>
