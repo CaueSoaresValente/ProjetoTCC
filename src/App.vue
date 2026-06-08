@@ -42,7 +42,8 @@
   import { useRoute, useRouter } from 'vue-router'
   import Footer from '@/components/Footer.vue'
   import Menu from '@/components/Menu.vue'
-  import { estaLogado, verificarSessao, logout } from '@/services/api'
+  import { estaLogado, logout } from '@/services/api'
+  import { connectWebSocket, disconnectWebSocket } from '@/services/websocket'
 
   const theme = useTheme()
   const route = useRoute()
@@ -57,35 +58,22 @@
     return !loginRoutes.includes(route.name as string)
   })
 
-  // ====================== POLLING DE SESSÃO ======================
-  // Verifica a cada 30s se o perfil do usuário ainda está ativo.
-  // Se foi excluído pelo gestor, exibe modal e faz logout.
-  // ================================================================
+  // ====================== WEBSOCKET — TEMPO REAL ======================
+  // Quando o gestor exclui um perfil, o backend envia um evento
+  // via WebSocket instantaneamente para o usuário logado nesse perfil.
+  // =====================================================================
 
   const mostrarModalExcluido = ref(false)
-  let sessionCheckInterval: ReturnType<typeof setInterval> | null = null
   let autoLogoutTimeout: ReturnType<typeof setTimeout> | null = null
 
-  async function verificarSessaoAtiva() {
-    // Só verifica se o usuário está logado
-    if (!estaLogado()) return
+  function onSessionExpired() {
+    // Callback chamado pelo serviço de WebSocket quando recebe SESSION_EXPIRED
+    mostrarModalExcluido.value = true
 
-    try {
-      const resultado = await verificarSessao()
-      if (resultado && resultado.ativo === false) {
-        // Perfil foi excluído — exibe o modal
-        pararPolling()
-        mostrarModalExcluido.value = true
-
-        // Auto-logout após 5 segundos se o usuário não clicar
-        autoLogoutTimeout = setTimeout(() => {
-          executarLogout()
-        }, 5000)
-      }
-    } catch {
-      // Se der 401 (token inválido), o token já expirou — faz logout silencioso
-      // Outros erros de rede são ignorados (o próximo ciclo tentará de novo)
-    }
+    // Auto-logout após 5 segundos se o usuário não clicar em "OK"
+    autoLogoutTimeout = setTimeout(() => {
+      executarLogout()
+    }, 5000)
   }
 
   function executarLogout() {
@@ -94,41 +82,28 @@
       autoLogoutTimeout = null
     }
     mostrarModalExcluido.value = false
+    disconnectWebSocket()
     logout()
     window.dispatchEvent(new Event('usuario-atualizado'))
     router.push('/login')
   }
 
-  function iniciarPolling() {
-    if (sessionCheckInterval) return
-    sessionCheckInterval = setInterval(verificarSessaoAtiva, 30000)
-    // Também verifica imediatamente na primeira vez
-    verificarSessaoAtiva()
-  }
-
-  function pararPolling() {
-    if (sessionCheckInterval) {
-      clearInterval(sessionCheckInterval)
-      sessionCheckInterval = null
-    }
-  }
-
-  // Inicia/para o polling com base na rota atual
+  // Conecta/desconecta o WebSocket com base na rota atual
   watch(
     () => route.name,
     (novaRota) => {
       const loginRoutes = ['telainput', 'login']
       if (loginRoutes.includes(novaRota as string) || !estaLogado()) {
-        pararPolling()
+        disconnectWebSocket()
       } else {
-        iniciarPolling()
+        connectWebSocket(onSessionExpired)
       }
     },
     { immediate: true }
   )
 
   onBeforeUnmount(() => {
-    pararPolling()
+    disconnectWebSocket()
     if (autoLogoutTimeout) {
       clearTimeout(autoLogoutTimeout)
     }

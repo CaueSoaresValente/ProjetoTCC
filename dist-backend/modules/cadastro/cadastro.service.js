@@ -6,6 +6,7 @@ import { OPPArea } from '../area/opp-area.entity.js';
 import { Gestor } from '../gestor/gestor.entity.js';
 import { Professor } from '../professor/professor.entity.js';
 import { Turma } from '../turma/turma.entity.js';
+import { WebSocketManager } from '../../shared/websocket.manager.js';
 export class CadastroService {
     repo = new CadastroRepository();
     async create(data) {
@@ -114,7 +115,10 @@ export class CadastroService {
             }
         }
         // Por fim, realiza o soft-delete do cadastro
-        return await this.repo.delete(id);
+        const result = await this.repo.delete(id);
+        // Notifica em tempo real a exclusão do perfil para o usuário e encerra a sessão
+        WebSocketManager.notifyUserSessionExpired(id);
+        return result;
     }
     // ====================== MÉTODOS AUXILIARES ======================
     async garantirGestor(idCadastro) {

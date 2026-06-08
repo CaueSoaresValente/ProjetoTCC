@@ -1,0 +1,1 @@
+{"version":3,"file":"websocket.manager.d.ts","sourceRoot":"","sources":["../../src/backend/shared/websocket.manager.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAE,MAAM,MAAM,CAAC;AAW9B,qBAAa,gBAAgB;IAC3B,OAAO,CAAC,MAAM,CAAC,GAAG,CAAgC;IAClD,OAAO,CAAC,MAAM,CAAC,UAAU,CAAwC;WAEnD,UAAU,CAAC,MAAM,EAAE,MAAM;IAmFvC;;OAEG;WACW,wBAAwB,CAAC,SAAS,EAAE,MAAM;CAoBzD"}
