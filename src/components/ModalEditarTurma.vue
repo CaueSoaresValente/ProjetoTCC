@@ -101,7 +101,8 @@ function filtrarOpps() {
   }));
 
   // Blindagem Premium: Garante que o OPP atual da turma sempre tenha seu nome exibido (e nunca o ID numérico)
-  if (props.turma?.idOPP) {
+  // Somente se a área atual do formulário for a mesma área original da turma
+  if (props.turma?.idOPP && form.value.idArea === props.turma?.idArea) {
     const jaEstaNaLista = oppsList.value.some(o => o.value === props.turma.idOPP);
     if (!jaEstaNaLista) {
       const oppOriginal = todosOpps.value.find(o => o.idOPP === props.turma.idOPP);
