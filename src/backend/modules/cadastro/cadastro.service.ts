@@ -1,3 +1,4 @@
+import { In } from 'typeorm';
 import { CadastroRepository } from './cadastro.repository.js';
 import { Cadastro } from './cadastro.entity.js';
 import { AppDataSource } from '../../config/data-source.js';
@@ -9,6 +10,8 @@ import { Turma } from '../turma/turma.entity.js';
 import { WebSocketManager } from '../../shared/websocket.manager.js';
 import { ProfessorArea } from '../area/professor-area.entity.js';
 import { ProfessorUC } from '../disciplina/professor-uc.entity.js';
+import { ProfessorTurma } from '../turma/professor-turma.entity.js';
+import { TurmaUC } from '../turma/turma-uc.entity.js';
 
 export class CadastroService {
   private repo = new CadastroRepository();
@@ -314,6 +317,38 @@ export class CadastroService {
     }
 
     // 2. Atualiza as UCs/Competências do professor
+    // Primeiro identificamos se alguma UC foi removida para desalocar de turmas
+    const ucsNoBanco = await profUCRepo.find({ where: { idProfessor: prof.idProfessor } });
+    const ucsNovasIds = ucs || [];
+    const ucsRemovidasIds = ucsNoBanco
+      .map(ucB => ucB.idUC)
+      .filter(idUC => !ucsNovasIds.includes(idUC));
+
+    if (ucsRemovidasIds.length > 0) {
+      const turmaUCRepo = AppDataSource.getRepository(TurmaUC);
+      const profTurmaRepo = AppDataSource.getRepository(ProfessorTurma);
+
+      // slots de turma (turma_uc) que possuem as UCs removidas
+      const slotsDaUCRemovidas = await turmaUCRepo.find({
+        where: { idUC: In(ucsRemovidasIds) }
+      });
+
+      if (slotsDaUCRemovidas.length > 0) {
+        const idsTurmaUC = slotsDaUCRemovidas.map(s => s.idTurmaUC);
+
+        // Remover todas as alocações do professor nesses slots
+        const alocacoes = await profTurmaRepo
+          .createQueryBuilder('pt')
+          .where('pt.idProfessor = :idProfessor', { idProfessor: prof.idProfessor })
+          .andWhere('pt.idTurmaUC IN (:...idsTurmaUC)', { idsTurmaUC })
+          .getMany();
+
+        if (alocacoes.length > 0) {
+          await profTurmaRepo.remove(alocacoes);
+        }
+      }
+    }
+
     await profUCRepo.delete({ idProfessor: prof.idProfessor });
     if (ucs.length > 0) {
       const registrosUCs = ucs.map((idUC) => profUCRepo.create({
