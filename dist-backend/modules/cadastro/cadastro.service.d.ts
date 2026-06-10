@@ -8,6 +8,7 @@ export declare class CadastroService {
     findById(id: number): Promise<Cadastro | null>;
     listAll(): Promise<{
         areas: string[];
+        areaIds: number[];
         idUsuario: number;
         email: string;
         senha: string;

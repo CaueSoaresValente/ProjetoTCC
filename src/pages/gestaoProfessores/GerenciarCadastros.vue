@@ -135,7 +135,9 @@ function abrirEditar(user) {
   
   if (selecionado.value === "OPP") {
     carregarAreas();
-    if (user.opp && user.opp.oppAreas) {
+    if (user.areaIds && user.areaIds.length > 0) {
+      areasSelecionadas.value = [...user.areaIds];
+    } else if (user.opp && user.opp.oppAreas) {
       areasSelecionadas.value = user.opp.oppAreas.map(oa => oa.idArea);
     } else {
       areasSelecionadas.value = [];

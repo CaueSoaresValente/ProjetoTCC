@@ -30,7 +30,7 @@ export class AreaService {
                 where: { idOPP: opp.idOPP },
                 relations: ['area', 'area.unidadesCurriculares'],
             });
-            const areas = oppAreas.map(oa => oa.area).filter(Boolean);
+            const areas = oppAreas.map(oa => oa.area).filter((area) => area && area.status);
             // Filtra as UCs de cada área para manter apenas ativas
             for (const area of areas) {
                 if (area.unidadesCurriculares) {
@@ -123,7 +123,7 @@ export class AreaService {
         // Para cada OPP vinculado, verificar se esta é a única área dele
         const oppsQuePerderiam = [];
         for (const oa of oppsDestaArea) {
-            if (!oa.opp || !oa.opp.status)
+            if (!oa.opp || !oa.opp.status || !oa.opp.cadastro || !oa.opp.cadastro.status)
                 continue; // ignora OPPs inativos
             // Contar quantas áreas ativas este OPP possui (filtrando por status da área)
             const totalAreas = await oppAreaRepo.count({

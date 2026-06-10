@@ -53,16 +53,18 @@ export class CadastroService {
                     where: { idCadastro: cadastro.idUsuario },
                     relations: ['oppAreas', 'oppAreas.area'],
                 });
-                const nomesDasAreas = opp?.oppAreas
-                    ?.map((oa) => oa.area?.nome)
-                    .filter(Boolean) || [];
+                // Filtrar apenas áreas ativas
+                const oppAreasAtivas = opp?.oppAreas?.filter((oa) => oa.area && oa.area.status) || [];
+                const nomesDasAreas = oppAreasAtivas.map((oa) => oa.area.nome).filter(Boolean);
+                const idsDasAreas = oppAreasAtivas.map((oa) => oa.idArea);
                 resultado.push({
                     ...cadastro,
                     areas: nomesDasAreas,
+                    areaIds: idsDasAreas,
                 });
             }
             else {
-                resultado.push({ ...cadastro, areas: [] });
+                resultado.push({ ...cadastro, areas: [], areaIds: [] });
             }
         }
         return resultado;
