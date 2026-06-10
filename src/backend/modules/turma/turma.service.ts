@@ -74,11 +74,16 @@ export class TurmaService {
     let turmas: Turma[];
 
     if (usuario.funcao === 'opp') {
-      const idOPP = await this.resolverIdOPP(usuario.idUsuario);
-      if (!idOPP) {
+      const oppRepo = AppDataSource.getRepository(OPP);
+      const opp = await oppRepo.findOne({
+        where: { idCadastro: usuario.idUsuario, status: true },
+        relations: ['oppAreas'],
+      });
+      if (!opp) {
         throw new Error('OPP não encontrado para este cadastro');
       }
-      turmas = await this.repo.findByOPP(idOPP);
+      const idsAreas = opp.oppAreas?.map(oa => oa.idArea) || [];
+      turmas = await this.repo.findByOPPAreas(opp.idOPP, idsAreas);
     } else {
       turmas = await this.repo.findAll();
     }

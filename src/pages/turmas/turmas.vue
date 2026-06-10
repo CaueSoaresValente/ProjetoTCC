@@ -202,8 +202,17 @@ const periodoDescricoes = {
 const filteredTurmas = computed(() => {
     return turmas.value.filter(turma => {
         // Filtro por área selecionada
-        const matchesArea = selectedArea.value === "Todas" || 
-                            turma.areas.some(a => a === selectedArea.value);
+        let matchesArea = false;
+        if (selectedArea.value === "Todas") {
+            if (usuarioLogado?.funcao === 'opp') {
+                // Para OPP, exibe as turmas que possuem alguma das suas áreas associadas
+                matchesArea = turma.areas.some(a => areasDisponiveis.value.some(ad => ad.nome === a));
+            } else {
+                matchesArea = true;
+            }
+        } else {
+            matchesArea = turma.areas.some(a => a === selectedArea.value);
+        }
 
         // Filtro por texto de busca
         const term = search.value.trim().toLowerCase();
