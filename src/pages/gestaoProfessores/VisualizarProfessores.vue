@@ -7,7 +7,7 @@
 // com o perfil completo (áreas, UCs, certificações, calendário, disponibilidade).
 // ============================================================
 
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import {
   listarProfessoresPerfis,
   buscarPerfilProfessor,
@@ -97,8 +97,27 @@ async function carregarProfessores() {
   }
 }
 
+let wsListener: any = null;
 onMounted(async () => {
   await carregarProfessores();
+
+  wsListener = (event: CustomEvent) => {
+    const detail = event.detail;
+    if (detail.entity === 'professores' || detail.entity === 'cadastros') {
+      console.log("🔄 Recarregando professores em tempo real...");
+      carregarProfessores();
+      if (showProfileDialog.value && perfilSelecionado.value?.idProfessor) {
+        abrirPerfil({ idProfessor: perfilSelecionado.value.idProfessor });
+      }
+    }
+  };
+  window.addEventListener('websocket-data-updated', wsListener as EventListener);
+});
+
+onBeforeUnmount(() => {
+  if (wsListener) {
+    window.removeEventListener('websocket-data-updated', wsListener as EventListener);
+  }
 });
 
 // ====================== FILTRAR PROFESSORES ======================

@@ -13,7 +13,7 @@
 // 5. Quando exclui, chamamos excluirArea() ou excluirCompetencia()
 // ============================================================
 
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, onBeforeUnmount } from "vue";
 
 // Importa as funções que falam com o backend
 import {
@@ -355,8 +355,24 @@ async function confirmarDeleteCompetencia() {
 
 // ====================== LIFECYCLE ======================
 // onMounted = "quando a tela abrir, faça isso"
+let wsListener = null;
 onMounted(async () => {
   await carregarDados();
+
+  wsListener = (event) => {
+    const detail = event.detail;
+    if (detail.entity === 'areas' || detail.entity === 'competencias') {
+      console.log("🔄 Recarregando áreas e competências em tempo real...");
+      carregarDados();
+    }
+  };
+  window.addEventListener('websocket-data-updated', wsListener);
+});
+
+onBeforeUnmount(() => {
+  if (wsListener) {
+    window.removeEventListener('websocket-data-updated', wsListener);
+  }
 });
 
 // Limpa os campos quando o modal de adicionar competência abre

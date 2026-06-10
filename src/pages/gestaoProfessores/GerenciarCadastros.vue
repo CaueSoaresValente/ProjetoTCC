@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, onBeforeUnmount } from "vue";
 import { listarCadastros, excluirCadastro, editarCadastro, criarCadastro, listarAreas, getUsuarioLogado } from "@/services/api";
 
 // ====================== ESTADO DA TELA ======================
@@ -196,9 +196,27 @@ async function confirmarDelete() {
   }
 }
 
+let wsListener = null;
 onMounted(() => {
   carregarUsuarios();
   carregarAreas();
+
+  wsListener = (event) => {
+    const detail = event.detail;
+    if (detail.entity === 'cadastros') {
+      console.log("🔄 Recarregando cadastros em tempo real...");
+      carregarUsuarios();
+    } else if (detail.entity === 'areas') {
+      carregarAreas();
+    }
+  };
+  window.addEventListener('websocket-data-updated', wsListener);
+});
+
+onBeforeUnmount(() => {
+  if (wsListener) {
+    window.removeEventListener('websocket-data-updated', wsListener);
+  }
 });
 </script>
 

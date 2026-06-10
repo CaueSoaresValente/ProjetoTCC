@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, onBeforeUnmount } from "vue";
 import {
   listarTurmas,
   buscarProfessoresElegiveis,
@@ -322,8 +322,42 @@ const periodoDescricoes: Record<string, string> = {
   INT: "Período Integral",
 };
 
+let wsListener: any;
+
 onMounted(() => {
   carregarTurmas();
+
+  wsListener = (event: any) => {
+    const detail = event.detail;
+    if (detail.entity === 'turmas' || detail.entity === 'professores') {
+      console.log("🔄 Recarregando turmas e alocações em tempo real...");
+      carregarTurmas().then(() => {
+        if (idTurmaSelecionada.value) {
+          turmaSelecionada.value = turmas.value.find((t) => t.idTurma === idTurmaSelecionada.value) || null;
+          if (slotSelecionado.value) {
+            // Se tiver slot selecionado, atualiza as informações do slot
+            const perObj = turmaSelecionada.value?.grade?.find((g: any) => g.periodo === slotSelecionado.value?.periodo);
+            const diaCurto = diasSemana.find(d => d.value === slotSelecionado.value?.diaSemana)?.label || '';
+            const aula = perObj?.aulas?.[diaCurto];
+            if (aula) {
+              slotSelecionado.value.professor = aula.professor;
+              slotSelecionado.value.idProfessor = aula.idProfessor;
+            } else {
+              slotSelecionado.value = null;
+            }
+            buscarProfessores();
+          }
+        }
+      });
+    }
+  };
+  window.addEventListener('websocket-data-updated', wsListener);
+});
+
+onBeforeUnmount(() => {
+  if (wsListener) {
+    window.removeEventListener('websocket-data-updated', wsListener);
+  }
 });
 </script>
 

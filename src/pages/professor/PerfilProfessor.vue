@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed, onMounted } from "vue";
+import { ref, watch, computed, onMounted, onBeforeUnmount } from "vue";
 import {
   getUsuarioLogado,
   buscarProfessorPorCadastro,
@@ -356,6 +356,8 @@ watch(dialogAddCertificacao, (val) => {
 // =============================================
 // INICIALIZAÇÃO — Carrega tudo ao montar a página
 // =============================================
+let wsListener;
+
 onMounted(async () => {
   try {
     const usuario = getUsuarioLogado();
@@ -387,6 +389,32 @@ onMounted(async () => {
     }
   } catch (e) { 
     console.error('Erro ao inicializar:', e);
+  }
+
+  wsListener = (event) => {
+    const detail = event.detail;
+    if (detail.entity === 'areas') {
+      carregarAreasDisponiveis();
+      carregarAreas();
+    } else if (detail.entity === 'competencias') {
+      carregarUnidades();
+      if (areaSelecionadaFiltro.value) {
+        listarUCsPorArea(areaSelecionadaFiltro.value).then(res => {
+          unidadesFiltradas.value = res;
+        }).catch(console.error);
+      }
+    } else if (detail.entity === 'professores') {
+      carregarAreas();
+      carregarUnidades();
+      carregarCertificacoes();
+    }
+  };
+  window.addEventListener('websocket-data-updated', wsListener);
+});
+
+onBeforeUnmount(() => {
+  if (wsListener) {
+    window.removeEventListener('websocket-data-updated', wsListener);
   }
 });
 </script>

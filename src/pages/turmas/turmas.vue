@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import ModalEditarTurma from "@/components/ModalEditarTurma.vue";
 import { listarTurmas, excluirTurma, editarTurma, atualizarDescricaoTurma, listarAreas, getUsuarioLogado } from "@/services/api";
 
@@ -160,12 +160,28 @@ function formatarErro(mensagem) {
     return mensagem;
 }
 
+let wsListener = null;
 onMounted(async () => {
     carregarTurmas();
     try {
         areasDisponiveis.value = await listarAreas();
     } catch (e) {
         console.error('Erro ao carregar áreas:', e);
+    }
+
+    wsListener = (event) => {
+        const detail = event.detail;
+        if (detail.entity === 'turmas' || detail.entity === 'areas') {
+            console.log("🔄 Recarregando turmas em tempo real...");
+            carregarTurmas();
+        }
+    };
+    window.addEventListener('websocket-data-updated', wsListener);
+});
+
+onBeforeUnmount(() => {
+    if (wsListener) {
+        window.removeEventListener('websocket-data-updated', wsListener);
     }
 });
 

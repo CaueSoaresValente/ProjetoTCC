@@ -28,6 +28,9 @@ export function connectWebSocket(onSessionExpired: () => void) {
         if (onSessionExpiredCallback) {
           onSessionExpiredCallback();
         }
+      } else if (data.type === 'DATA_UPDATED') {
+        console.log('⚡ Evento DATA_UPDATED recebido via WebSocket:', data);
+        window.dispatchEvent(new CustomEvent('websocket-data-updated', { detail: data }));
       }
     } catch (err) {
       console.error('Erro ao processar mensagem do WebSocket:', err);

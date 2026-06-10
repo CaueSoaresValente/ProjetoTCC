@@ -97,6 +97,25 @@ export class WebSocketManager {
   }
 
   /**
+   * Envia uma mensagem para todos os clientes conectados
+   */
+  public static broadcast(message: { type: string; [key: string]: any }) {
+    if (!this.wss) {
+      console.log('⚠️ WebSocketManager não está inicializado para fazer broadcast.');
+      return;
+    }
+    const msgString = JSON.stringify(message);
+    let count = 0;
+    this.wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(msgString);
+        count++;
+      }
+    });
+    console.log(`⚡ Broadcast WebSocket enviado para ${count} clientes: ${msgString}`);
+  }
+
+  /**
    * Notifica um usuário que sua sessão expirou e fecha todas as conexões ativas dele
    */
   public static notifyUserSessionExpired(idUsuario: number) {

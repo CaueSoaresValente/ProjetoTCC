@@ -8,6 +8,7 @@
 //   - O ID da UC é obrigatório
 // ============================================================
 import { ProfessorUCRepository } from './professor-uc.repository.js';
+import { WebSocketManager } from '../../shared/websocket.manager.js';
 export class ProfessorUCService {
     repo = new ProfessorUCRepository();
     // Lista todas as UCs de um professor
@@ -33,7 +34,10 @@ export class ProfessorUCService {
         if (jaExiste) {
             throw new Error('O professor já possui essa Unidade Curricular');
         }
-        return await this.repo.create(idProfessor, idUC, nivelCompetencia);
+        const result = await this.repo.create(idProfessor, idUC, nivelCompetencia);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+        return result;
     }
     // Atualiza o nível de competência
     async update(id, nivelCompetencia) {
@@ -41,11 +45,17 @@ export class ProfessorUCService {
         if (nivelCompetencia < 0 || nivelCompetencia > 100) {
             throw new Error('O nível de competência deve estar entre 0 e 100');
         }
-        return await this.repo.update(id, { nivelCompetencia });
+        const result = await this.repo.update(id, { nivelCompetencia });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+        return result;
     }
     // Remove o vínculo
     async delete(id) {
-        return await this.repo.delete(id);
+        const result = await this.repo.delete(id);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+        return result;
     }
 }
 //# sourceMappingURL=professor-uc.service.js.map

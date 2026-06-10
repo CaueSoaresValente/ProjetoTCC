@@ -15,6 +15,7 @@ import { Area } from './area.entity.js';
 import { AppDataSource } from '../../config/data-source.js';
 import { OPP } from '../opp/opp.entity.js';
 import { OPPArea } from './opp-area.entity.js';
+import { WebSocketManager } from '../../shared/websocket.manager.js';
 
 export class AreaService {
   // Instancia o repository para usar os métodos de banco
@@ -69,13 +70,17 @@ export class AreaService {
       } else {
         // Se a área existe mas está inativa (soft-deletada), reativamos!
         existente.status = true;
-        return await this.repo.update(existente.idArea, existente);
+        const result = await this.repo.update(existente.idArea, existente);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'areas' });
+        return result;
       }
     }
 
     // 2. Proteção try-catch contra violação de chave única no banco
     try {
-      return await this.repo.create({ ...data, nome: nomeFormatado });
+      const result = await this.repo.create({ ...data, nome: nomeFormatado });
+      WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'areas' });
+      return result;
     } catch (error: any) {
       if (
         error.code === '23505' ||
@@ -109,7 +114,9 @@ export class AreaService {
 
     // 2. Proteção try-catch contra violação de chave única no banco
     try {
-      return await this.repo.update(id, data);
+      const result = await this.repo.update(id, data);
+      WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'areas' });
+      return result;
     } catch (error: any) {
       if (
         error.code === '23505' ||
@@ -161,6 +168,8 @@ export class AreaService {
       );
     }
 
-    return await this.repo.delete(id);
+    const result = await this.repo.delete(id);
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'areas' });
+    return result;
   }
 }

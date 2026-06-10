@@ -6,6 +6,7 @@
 //   - O nome da certificação é obrigatório
 // ============================================================
 import { CertificacaoRepository } from './certificacao.repository.js';
+import { WebSocketManager } from '../../shared/websocket.manager.js';
 export class CertificacaoService {
     repo = new CertificacaoRepository();
     // Lista todas as certificações de um professor
@@ -19,10 +20,13 @@ export class CertificacaoService {
             throw new Error('O nome da certificação é obrigatório');
         }
         // Montamos o objeto completo com o idProfessor
-        return await this.repo.create({
+        const result = await this.repo.create({
             ...data,
             idProfessor,
         });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+        return result;
     }
     // Atualiza uma certificação existente
     async update(id, data) {
@@ -30,11 +34,17 @@ export class CertificacaoService {
         if (data.nome !== undefined && data.nome.trim() === '') {
             throw new Error('O nome da certificação não pode ser vazio');
         }
-        return await this.repo.update(id, data);
+        const result = await this.repo.update(id, data);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+        return result;
     }
     // Exclui uma certificação
     async delete(id) {
-        return await this.repo.delete(id);
+        const result = await this.repo.delete(id);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+        return result;
     }
 }
 //# sourceMappingURL=certificacao.service.js.map

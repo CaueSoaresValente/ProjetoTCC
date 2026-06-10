@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, computed } from "vue";
+import { ref, onMounted, watch, computed, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { criarTurma, listarUCsPorArea, getUsuarioLogado, listarAreas, listarOpps, listarCompetencias } from "@/services/api";
 
@@ -495,6 +495,7 @@ watch(selectedAreas, async (novaAreaId) => {
 // pelo Vue.js assim que este componente (página) aparece na tela.
 // É o local ideal para fazermos a conexão com o backend (API).
 // --------------------------------------------------------
+let wsListener = null;
 onMounted(async () => {
   await carregarAreas();
   await carregarOpps();
@@ -509,6 +510,24 @@ onMounted(async () => {
       // Alimentamos a lista de OPPs com o próprio usuário por padrão, mas permitiremos mudar se for o caso
       oppsResponsavel.value = [{ label: oppLogado.cadastro.nome, value: oppLogado.idOPP }];
     }
+  }
+
+  wsListener = (event) => {
+    const detail = event.detail;
+    if (detail.entity === 'areas') {
+      carregarAreas();
+    } else if (detail.entity === 'competencias') {
+      carregarTodasUCs();
+    } else if (detail.entity === 'cadastros') {
+      carregarOpps();
+    }
+  };
+  window.addEventListener('websocket-data-updated', wsListener);
+});
+
+onBeforeUnmount(() => {
+  if (wsListener) {
+    window.removeEventListener('websocket-data-updated', wsListener);
   }
 });
 

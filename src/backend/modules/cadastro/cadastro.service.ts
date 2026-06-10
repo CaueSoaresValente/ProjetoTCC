@@ -41,6 +41,7 @@ export class CadastroService {
       }
     }
 
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'cadastros' });
     return cadastro;
   }
 
@@ -96,7 +97,8 @@ export class CadastroService {
     if (data.funcao === 'opp') {
       await this.atualizarAreasOpp(id, areas);
     }
-
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'cadastros' });
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'areas' });
     return result;
   }
 
@@ -142,6 +144,9 @@ export class CadastroService {
     // Notifica em tempo real a exclusão do perfil para o usuário e encerra a sessão
     WebSocketManager.notifyUserSessionExpired(id);
 
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'cadastros' });
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
     return result;
   }
 

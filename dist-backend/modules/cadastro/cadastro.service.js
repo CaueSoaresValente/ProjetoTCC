@@ -35,6 +35,7 @@ export class CadastroService {
                 await this.garantirProfessor(cadastro.idUsuario);
             }
         }
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'cadastros' });
         return cadastro;
     }
     async findById(id) {
@@ -80,6 +81,8 @@ export class CadastroService {
         if (data.funcao === 'opp') {
             await this.atualizarAreasOpp(id, areas);
         }
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'cadastros' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'areas' });
         return result;
     }
     async delete(id) {
@@ -118,6 +121,9 @@ export class CadastroService {
         const result = await this.repo.delete(id);
         // Notifica em tempo real a exclusão do perfil para o usuário e encerra a sessão
         WebSocketManager.notifyUserSessionExpired(id);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'cadastros' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
         return result;
     }
     // ====================== MÉTODOS AUXILIARES ======================

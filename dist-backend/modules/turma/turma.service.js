@@ -9,6 +9,7 @@ import { ProfessorTurma } from './professor-turma.entity.js';
 import { Disponibilidade } from '../disponibilidade/disponibilidade.entity.js';
 import { Professor } from '../professor/professor.entity.js';
 import { TurmaUC } from './turma-uc.entity.js';
+import { WebSocketManager } from '../../shared/websocket.manager.js';
 // Prioridade de ordenação dos períodos (Manhã → Tarde → Noite)
 const PERIODO_ORDEM = {
     'M01': 1, 'M02': 2, 'Manhã': 3, 'MANHÃ': 3,
@@ -91,6 +92,7 @@ export class TurmaService {
         });
         await this.repo.saveHorarios(turma.idTurma, horariosResolvidos);
         const salva = await this.repo.findById(turma.idTurma);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
         return this.mapTurmaParaCard(salva);
     }
     async atualizar(idTurma, usuario, dados) {
@@ -141,6 +143,10 @@ export class TurmaService {
         updateData.aulasSemana = this.contarDiasUnicos(horariosFinais);
         updateData.totalAulas = this.calcularTotalAulas(dataInicioFinal, dataTerminoFinal, horariosFinais);
         const atualizada = await this.repo.update(idTurma, updateData);
+        if (atualizada) {
+            WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+            WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        }
         return atualizada ? this.mapTurmaParaCard(atualizada) : null;
     }
     async excluir(idTurma, usuario) {
@@ -149,6 +155,8 @@ export class TurmaService {
             return false;
         await this.verificarPermissao(usuario, turma);
         await this.repo.softDelete(idTurma);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
         return true;
     }
     async verificarPermissao(usuario, turma) {
@@ -559,6 +567,10 @@ export class TurmaService {
         });
         await profTurmaRepo.save(novo);
         const atualizada = await this.repo.findById(idTurma);
+        if (atualizada) {
+            WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+            WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        }
         return atualizada ? this.mapTurmaParaCard(atualizada) : null;
     }
     /**
@@ -597,6 +609,10 @@ export class TurmaService {
             await profTurmaRepo.remove(vinculos);
         }
         const atualizada = await this.repo.findById(idTurma);
+        if (atualizada) {
+            WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+            WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        }
         return atualizada ? this.mapTurmaParaCard(atualizada) : null;
     }
     /**

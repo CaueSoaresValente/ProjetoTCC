@@ -6,6 +6,7 @@
 //
 // FLUXO: Controller → Service → Repository → Banco de dados
 import { DisponibilidadeRepository } from './disponibilidade.repository.js';
+import { WebSocketManager } from '../../shared/websocket.manager.js';
 export class DisponibilidadeService {
     // Instancia o repository que criamos
     repo = new DisponibilidadeRepository();
@@ -21,11 +22,16 @@ export class DisponibilidadeService {
         if (jaExiste) {
             throw new Error(`Professor já tem disponibilidade para ${diaSemana} no período ${periodo}`);
         }
-        return await this.repo.create(idProfessor, diaSemana, periodo);
+        const result = await this.repo.create(idProfessor, diaSemana, periodo);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+        return result;
     }
     // Remove uma disponibilidade pelo ID
     async remover(idDisponibilidade) {
         await this.repo.delete(idDisponibilidade);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
     }
     // Sincroniza TODO o horário semanal do professor de uma vez.
     //
@@ -60,7 +66,10 @@ export class DisponibilidadeService {
             }
         }
         // 5. Retorna o estado final
-        return await this.repo.findByProfessorId(idProfessor);
+        const finalResult = await this.repo.findByProfessorId(idProfessor);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+        return finalResult;
     }
 }
 //# sourceMappingURL=disponibilidade.service.js.map

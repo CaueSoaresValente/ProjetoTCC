@@ -5,6 +5,7 @@
 // Mesma lógica do AreaService — valida e repassa para o Repository.
 // ============================================================
 import { UnidadeCurricularRepository } from './unidade-curricular.repository.js';
+import { WebSocketManager } from '../../shared/websocket.manager.js';
 export class UnidadeCurricularService {
     repo = new UnidadeCurricularRepository();
     // Lista todas as competências
@@ -38,10 +39,14 @@ export class UnidadeCurricularService {
                 if (data.descricao !== undefined) {
                     existente.descricao = data.descricao;
                 }
-                return await this.repo.update(existente.idUC, existente);
+                const result = await this.repo.update(existente.idUC, existente);
+                WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'competencias' });
+                return result;
             }
         }
-        return await this.repo.create({ ...data, nome: nomeFormatado });
+        const result = await this.repo.create({ ...data, nome: nomeFormatado });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'competencias' });
+        return result;
     }
     // Atualiza uma competência existente
     async update(id, data) {
@@ -65,11 +70,15 @@ export class UnidadeCurricularService {
             }
             data.nome = nomeFormatado;
         }
-        return await this.repo.update(id, data);
+        const result = await this.repo.update(id, data);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'competencias' });
+        return result;
     }
     // Exclui uma competência
     async delete(id) {
-        return await this.repo.delete(id);
+        const result = await this.repo.delete(id);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'competencias' });
+        return result;
     }
 }
 //# sourceMappingURL=unidade-curricular.service.js.map
