@@ -52,7 +52,7 @@ export class AreaService {
     return await this.repo.findById(id);
   }
 
-  // Cria uma nova área (com validação simples e de duplicidade)
+  // Cria uma nova área (com validação simples, duplicidade e reativação)
   async create(data: Partial<Area>) {
     // Validação: o nome é obrigatório
     if (!data.nome || data.nome.trim() === '') {
@@ -61,10 +61,16 @@ export class AreaService {
 
     const nomeFormatado = data.nome.trim();
 
-    // 1. Verificação prévia case-insensitive de área ativa
-    const existente = await this.repo.findByName(nomeFormatado);
+    // 1. Verificação prévia case-insensitive de área independente de status
+    const existente = await this.repo.findByNameAnyStatus(nomeFormatado);
     if (existente) {
-      throw new Error('Já existe uma área cadastrada com este nome');
+      if (existente.status) {
+        throw new Error('Já existe uma área cadastrada com este nome');
+      } else {
+        // Se a área existe mas está inativa (soft-deletada), reativamos!
+        existente.status = true;
+        return await this.repo.update(existente.idArea, existente);
+      }
     }
 
     // 2. Proteção try-catch contra violação de chave única no banco
@@ -132,9 +138,13 @@ export class AreaService {
     for (const oa of oppsDestaArea) {
       if (!oa.opp || !oa.opp.status) continue; // ignora OPPs inativos
 
-      // Contar quantas áreas ativas este OPP possui
+      // Contar quantas áreas ativas este OPP possui (filtrando por status da área)
       const totalAreas = await oppAreaRepo.count({
-        where: { idOPP: oa.opp.idOPP },
+        where: {
+          idOPP: oa.opp.idOPP,
+          area: { status: true }
+        },
+        relations: ['area']
       });
 
       if (totalAreas <= 1) {

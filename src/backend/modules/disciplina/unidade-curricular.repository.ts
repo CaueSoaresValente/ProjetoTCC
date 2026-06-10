@@ -8,6 +8,7 @@
 // mas no banco o nome da tabela é "unidade_curricular".
 // ============================================================
 
+import { ILike } from 'typeorm';
 import { AppDataSource } from '../../config/data-source.js';
 import { UnidadeCurricular } from './unidade-curricular.entity.js';
 import { ProfessorUC } from './professor-uc.entity.js';
@@ -30,6 +31,13 @@ export class UnidadeCurricularRepository {
     return await this.repo.findOne({
       where: { idUC: id, status: true },
       relations: ['area'],
+    });
+  }
+
+  // Busca uma UC pelo nome e área independente de status (ativo ou deletado)
+  async findByNameAndAreaAnyStatus(nome: string, idArea: number): Promise<UnidadeCurricular | null> {
+    return await this.repo.findOne({
+      where: { nome: ILike(nome.trim()), idArea },
     });
   }
 

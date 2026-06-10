@@ -3,7 +3,7 @@ export declare class AreaService {
     private repo;
     findAll(usuario?: any): Promise<Area[]>;
     findById(id: number): Promise<Area | null>;
-    create(data: Partial<Area>): Promise<Area>;
+    create(data: Partial<Area>): Promise<Area | null>;
     update(id: number, data: Partial<Area>): Promise<Area | null>;
     delete(id: number): Promise<void>;
 }

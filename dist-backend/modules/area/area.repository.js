@@ -52,6 +52,12 @@ export class AreaRepository {
             where: { nome: ILike(nome.trim()), status: true },
         });
     }
+    // Busca uma área pelo nome independente de status (ativo ou deletado)
+    async findByNameAnyStatus(nome) {
+        return await this.repo.findOne({
+            where: { nome: ILike(nome.trim()) },
+        });
+    }
     // ====================== CRIAR ======================
     // Cria uma nova área no banco.
     // O "this.repo.create()" monta o objeto, e o "this.repo.save()" salva.
