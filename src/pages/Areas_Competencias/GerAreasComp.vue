@@ -657,17 +657,15 @@ watch(dialogAddArea, (val) => {
       </v-card-text>
       <v-card-actions class="pa-4 justify-between mb-2">
         <v-btn
-          color="grey"
           variant="elevated"
           @click="dialogAdd = false"
-          class="dark:bg-[#414141] dark:text-white"
           >Cancelar</v-btn
         >
         <v-btn
           color="red"
           variant="elevated"
+          class="bg-red-600! text-white!"
           @click="salvarNovaCompetencia"
-          class="dark:bg-red-600 dark:text-white bg-red-600 text-white"
           >Salvar</v-btn
         >
       </v-card-actions>
@@ -712,17 +710,15 @@ watch(dialogAddArea, (val) => {
 
         <v-card-actions class="mb-3 p-0 px-5 flex justify-between">
           <v-btn
-            color="red"
             variant="elevated"
             @click="dialogEdit = false"
-            class="dark:bg-red-600 dark:text-white text-black"
             >Cancelar</v-btn
           >
           <v-btn
             color="red"
             variant="elevated"
+            class="bg-red-600! text-white! font-bold"
             @click="salvarEditArea"
-            class="dark:bg-red-600 dark:text-white bg-red-600 text-white font-bold"
             >Salvar</v-btn
           >
         </v-card-actions>
@@ -775,17 +771,15 @@ watch(dialogAddArea, (val) => {
 
         <v-card-actions class="p-0 px-5 flex justify-between mt-6">
           <v-btn
-            color="red"
             variant="elevated"
             @click="dialogEditCompetencia = false"
-            class="dark:bg-red-600 dark:text-white text-black"
             >Cancelar</v-btn
           >
           <v-btn
             color="red"
             variant="elevated"
+            class="bg-red-600! text-white! font-bold"
             @click="salvarEditCompetencia"
-            class="dark:bg-red-600 dark:text-white bg-red-600 text-white font-bold"
             >Salvar</v-btn
           >
         </v-card-actions>
@@ -826,8 +820,8 @@ watch(dialogAddArea, (val) => {
         ></v-text-field>
       </v-card-text>
       <v-card-actions class="px-5 justify-between mb-2">
-        <v-btn color="grey" variant="elevated" @click="dialogAddArea = false">Cancelar</v-btn>
-        <v-btn color="red" variant="elevated" @click="salvarNovaArea" class="bg-red-600 text-white">Salvar</v-btn>
+        <v-btn variant="elevated" @click="dialogAddArea = false">Cancelar</v-btn>
+        <v-btn color="red" variant="elevated" class="bg-red-600! text-white!" @click="salvarNovaArea">Salvar</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

@@ -19,6 +19,7 @@ export class CadastroService {
         // Separa as áreas do payload antes de criar o cadastro
         const areas = data.areas || [];
         delete data.areas;
+        delete data.areaIds;
         if (data.senha) {
             data.senha = await this.repo.hashPassword(data.senha);
         }
@@ -73,6 +74,7 @@ export class CadastroService {
         // Separa as áreas do payload
         const areas = data.areas || [];
         delete data.areas;
+        delete data.areaIds;
         // CORREÇÃO: Se a senha foi enviada, precisamos fazer o hash antes de salvar.
         // Caso contrário, a senha seria salva em texto puro, quebrando o login.
         if (data.senha) {

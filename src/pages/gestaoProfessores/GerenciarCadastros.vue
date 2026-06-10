@@ -371,8 +371,8 @@ onBeforeUnmount(() => {
       </v-card-text>
       <v-card-actions class="pa-4">
         <v-spacer></v-spacer>
-        <v-btn @click="dialogEdit = false">Cancelar</v-btn>
-        <v-btn color="red" variant="elevated" @click="salvarEdicao">Salvar</v-btn>
+        <v-btn @click="dialogEdit = false" variant="elevated">Cancelar</v-btn>
+        <v-btn color="red" variant="elevated" class="bg-red-600! text-white!" @click="salvarEdicao">Salvar</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
