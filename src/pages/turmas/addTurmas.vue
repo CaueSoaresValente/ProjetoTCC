@@ -344,6 +344,19 @@ const filteredCompetencias = computed(() => {
   return list;
 });
 
+const areasParaFiltroUC = computed(() => {
+  const mapaAreas = new Map();
+  for (const uc of todasUnidadesCurriculares.value) {
+    if (uc.idArea && !mapaAreas.has(uc.idArea)) {
+      mapaAreas.set(uc.idArea, {
+        title: uc.areaNome || `Área ${uc.idArea}`,
+        value: uc.idArea
+      });
+    }
+  }
+  return Array.from(mapaAreas.values());
+});
+
 function abrirModal(diaValue) {
   diaDoModal.value = diaValue;
   buscaUC.value = "";
@@ -515,6 +528,7 @@ async function carregarTodasUCs() {
         idUC: uc.idUC,
         nome: uc.nome,
         idArea: uc.idArea,
+        areaNome: uc.area?.nome || '',
         carga: carga || undefined
       };
     });
@@ -1108,7 +1122,7 @@ function isIntegral(periodo) {
       <div class="px-6 space-y-3 mb-4">
         <div>
           <p class="mb-1 font-bold text-[12px] text-gray-500 uppercase tracking-wide">Filtrar por Área</p>
-          <v-select v-model="areaFiltroModal" :items="areasDisponiveis" item-title="title" item-value="value"
+          <v-select v-model="areaFiltroModal" :items="areasParaFiltroUC" item-title="title" item-value="value"
             placeholder="Selecione a área..." variant="filled" density="compact" hide-details clearable></v-select>
         </div>
         
@@ -1124,11 +1138,11 @@ function isIntegral(periodo) {
         <div v-for="(uc, index) in filteredCompetencias" :key="uc.idUC" class="flex items-center gap-2 mb-4">
           <v-checkbox :model-value="isUCSelected(uc.idUC)" @update:model-value="toggleUCSelection(uc)"
             :label="uc.carga ? uc.nome + ' (' + uc.carga + ')' : uc.nome" color="red" hide-details density="compact"
-            :disabled="!isUCSelected(uc.idUC) && periodosDisponiveisPara(uc.nome).length === 0"
+            :disabled="!isUCSelected(uc.idUC) && periodosDisponiveisPara(uc.idUC).length === 0"
             class="flex-1"></v-checkbox>
           
           <v-select v-if="isUCSelected(uc.idUC)" :model-value="getSelectedUCPeriod(uc.idUC)"
-            @update:model-value="updateUCPeriod(uc.idUC, $event)" :items="periodosDisponiveisPara(uc.nome)" label="Período"
+            @update:model-value="updateUCPeriod(uc.idUC, $event)" :items="periodosDisponiveisPara(uc.idUC)" label="Período"
             variant="outlined" density="compact" hide-details class="max-w-[130px]"></v-select>
         </div>
         <div v-if="filteredCompetencias.length === 0" class="text-center py-10 text-gray-400 font-bold uppercase text-xs">

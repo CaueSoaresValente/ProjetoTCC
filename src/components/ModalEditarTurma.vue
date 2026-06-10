@@ -64,6 +64,21 @@ const filteredCompetencias = computed(() => {
   return list;
 });
 
+// Lista de áreas derivada das UCs carregadas — garante que o OPP veja
+// UCs de TODAS as áreas do sistema (não apenas as suas) ao montar a turma
+const areasParaFiltroUC = computed(() => {
+  const mapaAreas = new Map();
+  for (const uc of todasUnidadesCurriculares.value) {
+    if (uc.idArea && !mapaAreas.has(uc.idArea)) {
+      mapaAreas.set(uc.idArea, {
+        title: uc.areaNome || `Área ${uc.idArea}`,
+        value: uc.idArea,
+      });
+    }
+  }
+  return [...mapaAreas.values()].sort((a, b) => a.title.localeCompare(b.title));
+});
+
 async function carregarAreas() {
   try {
     const data = await listarAreas();
@@ -195,6 +210,7 @@ async function carregarTodasUCs() {
         idUC: uc.idUC,
         nome: uc.nome,
         idArea: uc.idArea,
+        areaNome: uc.area?.nome || '',
         carga: carga || undefined
       };
     });
@@ -1018,7 +1034,7 @@ function salvar() {
         <div class="px-6 space-y-3 mb-4">
           <div>
             <p class="mb-1 font-bold text-[12px] text-gray-500 uppercase tracking-wide">Filtrar por Área</p>
-            <v-select v-model="areaFiltroModal" :items="areasDisponiveis" item-title="title" item-value="value"
+            <v-select v-model="areaFiltroModal" :items="areasParaFiltroUC" item-title="title" item-value="value"
               placeholder="Selecione a área..." variant="filled" density="compact" hide-details clearable></v-select>
           </div>
 
