@@ -97,8 +97,34 @@ export class AreaService {
             throw error;
         }
     }
-    // Exclui uma área
+    // Exclui uma área (com validação de OPPs que ficariam sem áreas)
     async delete(id) {
+        // Validação: verificar se algum OPP ficaria sem áreas após a remoção
+        const oppAreaRepo = AppDataSource.getRepository(OPPArea);
+        // Buscar todos os OPPs vinculados a esta área
+        const oppsDestaArea = await oppAreaRepo.find({
+            where: { idArea: id },
+            relations: ['opp', 'opp.cadastro'],
+        });
+        // Para cada OPP vinculado, verificar se esta é a única área dele
+        const oppsQuePerderiam = [];
+        for (const oa of oppsDestaArea) {
+            if (!oa.opp || !oa.opp.status)
+                continue; // ignora OPPs inativos
+            // Contar quantas áreas ativas este OPP possui
+            const totalAreas = await oppAreaRepo.count({
+                where: { idOPP: oa.opp.idOPP },
+            });
+            if (totalAreas <= 1) {
+                const nomeOPP = oa.opp.cadastro?.nome || `OPP #${oa.opp.idOPP}`;
+                oppsQuePerderiam.push(nomeOPP);
+            }
+        }
+        if (oppsQuePerderiam.length > 0) {
+            const nomes = oppsQuePerderiam.join(', ');
+            throw new Error(`Não é possível desativar esta área. Os seguintes OPPs ficariam sem nenhuma área: ${nomes}. ` +
+                `Vincule outra área a esses OPPs antes de desativar esta.`);
+        }
         return await this.repo.delete(id);
     }
 }

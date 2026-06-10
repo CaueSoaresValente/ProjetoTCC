@@ -45,6 +45,15 @@ async function request(url: string, options: RequestInit = {}) {
     headers,
   });
 
+  // Se o token expirou ou o perfil foi excluído (401), desloga e redireciona imediatamente
+  if (response.status === 401 && !url.includes('/api/auth/login')) {
+    logout();
+    window.dispatchEvent(new Event('usuario-atualizado'));
+    if (!window.location.pathname.includes('/login') && window.location.pathname !== '/') {
+      window.location.href = '/login';
+    }
+  }
+
   // Se deu erro, lança uma exceção
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));

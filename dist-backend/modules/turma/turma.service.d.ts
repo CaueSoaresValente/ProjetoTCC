@@ -52,7 +52,7 @@ export declare class TurmaService {
         dataTerminoISO: string;
         criadorNome: string;
         oppNome: string;
-        idOPP: number;
+        idOPP: number | null;
         professores: {
             idProfessor: number;
             nome: string;
@@ -86,7 +86,7 @@ export declare class TurmaService {
         dataTerminoISO: string;
         criadorNome: string;
         oppNome: string;
-        idOPP: number;
+        idOPP: number | null;
         professores: {
             idProfessor: number;
             nome: string;
@@ -120,7 +120,7 @@ export declare class TurmaService {
         dataTerminoISO: string;
         criadorNome: string;
         oppNome: string;
-        idOPP: number;
+        idOPP: number | null;
         professores: {
             idProfessor: number;
             nome: string;
@@ -194,7 +194,7 @@ export declare class TurmaService {
         dataTerminoISO: string;
         criadorNome: string;
         oppNome: string;
-        idOPP: number;
+        idOPP: number | null;
         professores: {
             idProfessor: number;
             nome: string;
@@ -233,7 +233,7 @@ export declare class TurmaService {
         dataTerminoISO: string;
         criadorNome: string;
         oppNome: string;
-        idOPP: number;
+        idOPP: number | null;
         professores: {
             idProfessor: number;
             nome: string;

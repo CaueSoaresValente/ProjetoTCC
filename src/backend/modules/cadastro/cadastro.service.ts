@@ -127,9 +127,9 @@ export class CadastroService {
         // 1. Soft-delete o registro de OPP
         await oppRepo.update(opp.idOPP, { status: false });
 
-        // 2. Soft-delete em cascata de todas as turmas deste OPP (idOPP é obrigatório)
+        // 2. Deixar as turmas deste OPP sem OPP (setar idOPP para null)
         const turmaRepo = AppDataSource.getRepository(Turma);
-        await turmaRepo.update({ idOPP: opp.idOPP }, { status: false });
+        await turmaRepo.update({ idOPP: opp.idOPP }, { idOPP: null });
 
         // 3. Limpar vínculos de área do OPP
         await AppDataSource.getRepository('opp_area').delete({ idOPP: opp.idOPP });

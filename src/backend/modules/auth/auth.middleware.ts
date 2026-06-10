@@ -1,6 +1,8 @@
 // src/backend/modules/auth/auth.middleware.ts
 import { Request, Response, NextFunction } from "express";
 import { AuthService } from "./auth.service.js";
+import { AppDataSource } from "../../config/data-source.js";
+import { Cadastro } from "../cadastro/cadastro.entity.js";
 
 const authService = new AuthService();
 
@@ -24,6 +26,13 @@ export const authMiddleware = (rolesPermitidos: string[] = []) => {
 
     if (!decoded) {
       return res.status(401).json({ message: "Token inválido ou expirado" });
+    }
+
+    // Validação de segurança: verificar se o usuário ainda existe e está ativo no banco
+    const cadastroRepo = AppDataSource.getRepository(Cadastro);
+    const cadastro = await cadastroRepo.findOne({ where: { idUsuario: decoded.idUsuario } });
+    if (!cadastro || !cadastro.status) {
+      return res.status(401).json({ message: "Sessão inválida ou perfil excluído" });
     }
 
     // Verifica RBAC (perfis permitidos)
