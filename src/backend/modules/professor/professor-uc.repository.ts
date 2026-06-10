@@ -42,6 +42,14 @@ export class ProfessorUCRepository {
     });
   }
 
+  // ====================== BUSCAR POR ID ======================
+  // Busca um vínculo específico pelo ID.
+  async findById(id: number): Promise<ProfessorUC | null> {
+    return await this.repo.findOne({
+      where: { idProfessorUC: id },
+    });
+  }
+
   // ====================== VERIFICAR DUPLICATA ======================
   // Verifica se o professor já tem essa UC vinculada.
   async findByProfessorAndUC(idProfessor: number, idUC: number): Promise<ProfessorUC | null> {
