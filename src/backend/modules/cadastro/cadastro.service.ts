@@ -7,6 +7,8 @@ import { Gestor } from '../gestor/gestor.entity.js';
 import { Professor } from '../professor/professor.entity.js';
 import { Turma } from '../turma/turma.entity.js';
 import { WebSocketManager } from '../../shared/websocket.manager.js';
+import { ProfessorArea } from '../area/professor-area.entity.js';
+import { ProfessorUC } from '../disciplina/professor-uc.entity.js';
 
 export class CadastroService {
   private repo = new CadastroRepository();
@@ -21,10 +23,13 @@ export class CadastroService {
       throw new Error("Já existe um cadastro com este e-mail.");
     }
 
-    // Separa as áreas do payload antes de criar o cadastro
+    // Separa as áreas e UCs do payload antes de criar o cadastro
     const areas: number[] = data.areas || [];
+    const ucs: number[] = data.ucs || [];
     delete data.areas;
     delete data.areaIds;
+    delete data.ucs;
+    delete data.ucIds;
 
     if (data.senha) {
       data.senha = await this.repo.hashPassword(data.senha);
@@ -39,6 +44,7 @@ export class CadastroService {
         await this.garantirGestor(cadastro.idUsuario);
       } else if (data.funcao === 'professor') {
         await this.garantirProfessor(cadastro.idUsuario);
+        await this.atualizarAreasProfessor(cadastro.idUsuario, areas, ucs);
       }
     }
 
@@ -53,8 +59,8 @@ export class CadastroService {
   async listAll() {
     const cadastros = await this.repo.listAll();
 
-    // Para cada cadastro OPP, busca as áreas vinculadas
     const oppRepo = AppDataSource.getRepository(OPP);
+    const profRepo = AppDataSource.getRepository(Professor);
     const resultado = [];
 
     for (const cadastro of cadastros) {
@@ -75,9 +81,40 @@ export class CadastroService {
           ...cadastro,
           areas: nomesDasAreas,
           areaIds: idsDasAreas,
+          ucs: [],
+          ucIds: [],
+        });
+      } else if (cadastro.funcao === 'professor') {
+        // Busca o Professor deste cadastro com suas áreas e UCs
+        const prof = await profRepo.findOne({
+          where: { idCadastro: cadastro.idUsuario },
+          relations: [
+            'professorAreas',
+            'professorAreas.area',
+            'professorUCs',
+            'professorUCs.unidadeCurricular',
+          ],
+        });
+
+        // Filtrar apenas áreas ativas
+        const profAreasAtivas = prof?.professorAreas?.filter((pa) => pa.area && pa.area.status) || [];
+        const nomesDasAreas = profAreasAtivas.map((pa) => pa.area.nome).filter(Boolean);
+        const idsDasAreas = profAreasAtivas.map((pa) => pa.area.idArea);
+
+        // Filtrar apenas UCs ativas
+        const profUCsAtivas = prof?.professorUCs?.filter((puc) => puc.unidadeCurricular && puc.unidadeCurricular.status) || [];
+        const nomesDasUCs = profUCsAtivas.map((puc) => puc.unidadeCurricular.nome).filter(Boolean);
+        const idsDasUCs = profUCsAtivas.map((puc) => puc.idUC);
+
+        resultado.push({
+          ...cadastro,
+          areas: nomesDasAreas,
+          areaIds: idsDasAreas,
+          ucs: nomesDasUCs,
+          ucIds: idsDasUCs,
         });
       } else {
-        resultado.push({ ...cadastro, areas: [], areaIds: [] });
+        resultado.push({ ...cadastro, areas: [], areaIds: [], ucs: [], ucIds: [] });
       }
     }
 
@@ -87,8 +124,11 @@ export class CadastroService {
   async update(id: number, data: any) {
     // Separa as áreas do payload
     const areas: number[] = data.areas || [];
+    const ucs: number[] = data.ucs || [];
     delete data.areas;
     delete data.areaIds;
+    delete data.ucs;
+    delete data.ucIds;
 
     // CORREÇÃO: Se a senha foi enviada, precisamos fazer o hash antes de salvar.
     // Caso contrário, a senha seria salva em texto puro, quebrando o login.
@@ -101,6 +141,8 @@ export class CadastroService {
     // Se for OPP, atualiza as áreas vinculadas
     if (data.funcao === 'opp') {
       await this.atualizarAreasOpp(id, areas);
+    } else if (data.funcao === 'professor') {
+      await this.atualizarAreasProfessor(id, areas, ucs);
     }
     WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'cadastros' });
     WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'areas' });
@@ -244,6 +286,44 @@ export class CadastroService {
       }));
       await oppAreaRepo.save(registros);
       console.log(`✅ Áreas atualizadas para OPP id=${opp.idOPP}: ${areas.join(', ')}`);
+    }
+  }
+
+  private async atualizarAreasProfessor(idCadastro: number, areas: number[], ucs: number[]) {
+    const profRepo = AppDataSource.getRepository(Professor);
+    const profAreaRepo = AppDataSource.getRepository(ProfessorArea);
+    const profUCRepo = AppDataSource.getRepository(ProfessorUC);
+
+    // Busca o professor pelo id_cadastro
+    let prof = await profRepo.findOne({ where: { idCadastro } });
+    if (!prof) {
+      // Se não existir, garante que exista
+      await this.garantirProfessor(idCadastro);
+      prof = await profRepo.findOne({ where: { idCadastro } }) as Professor;
+    }
+
+    // 1. Atualiza as áreas do professor
+    await profAreaRepo.delete({ idProfessor: prof.idProfessor });
+    if (areas.length > 0) {
+      const registrosAreas = areas.map((idArea) => profAreaRepo.create({
+        idProfessor: prof.idProfessor,
+        idArea: idArea,
+      }));
+      await profAreaRepo.save(registrosAreas);
+      console.log(`✅ Áreas atualizadas para Professor id=${prof.idProfessor}: ${areas.join(', ')}`);
+    }
+
+    // 2. Atualiza as UCs/Competências do professor
+    await profUCRepo.delete({ idProfessor: prof.idProfessor });
+    if (ucs.length > 0) {
+      const registrosUCs = ucs.map((idUC) => profUCRepo.create({
+        idProfessor: prof.idProfessor,
+        idUC: idUC,
+        nivelCompetencia: 100.00, // default para cadastrado pelo gestor
+        status: true,
+      }));
+      await profUCRepo.save(registrosUCs);
+      console.log(`✅ UCs atualizadas para Professor id=${prof.idProfessor}: ${ucs.join(', ')}`);
     }
   }
 }
