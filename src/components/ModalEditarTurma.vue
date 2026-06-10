@@ -300,32 +300,11 @@ watch(() => props.turma, (newTurma) => {
     if (newTurma.grade) {
       newTurma.grade.forEach(slot => {
         const p = slot.periodo;
-        const pLower = p.toLowerCase();
         const diaMap = { 'Seg': 'segunda', 'Ter': 'terca', 'Qua': 'quarta', 'Qui': 'quinta', 'Sex': 'sexta', 'Sáb': 'sabado' };
 
         Object.keys(slot.aulas || {}).forEach(dia => {
           const diaKey = diaMap[dia];
           if (diaKey) {
-            // Mapeia os sub-tipos de integral corretamente
-            const pNorm = p.trim();
-            if (pNorm === 'INT_MT' || pNorm === 'INT_MN' || pNorm === 'INT_TN') {
-              selectedPeriodo.value[diaKey] = pNorm;
-            } else if (pLower.includes('manhã + tarde') || pLower.includes('manha + tarde')) {
-              selectedPeriodo.value[diaKey] = 'INT_MT';
-            } else if (pLower.includes('manhã + noite') || pLower.includes('manha + noite')) {
-              selectedPeriodo.value[diaKey] = 'INT_MN';
-            } else if (pLower.includes('tarde + noite')) {
-              selectedPeriodo.value[diaKey] = 'INT_TN';
-            } else if (pLower.includes('integral') || pNorm === 'INT') {
-              selectedPeriodo.value[diaKey] = 'INT_MT'; // Integral padrão = Manhã+Tarde
-            } else if (pLower.startsWith('m')) {
-              selectedPeriodo.value[diaKey] = 'manha';
-            } else if (pLower.startsWith('t')) {
-              selectedPeriodo.value[diaKey] = 'tarde';
-            } else if (pLower.startsWith('n')) {
-              selectedPeriodo.value[diaKey] = 'noite';
-            }
-
             if (!ucsSalvas.value[diaKey].some(item => item.idUC === slot.aulas[dia].idUC && item.periodo === slot.periodo)) {
               ucsSalvas.value[diaKey].push({ 
                 uc: slot.aulas[dia].disciplina, 
@@ -336,6 +315,59 @@ watch(() => props.turma, (newTurma) => {
             }
           }
         });
+      });
+
+      // Deduzir o selectedPeriodo com base nas UCs inseridas para cada dia
+      Object.keys(ucsSalvas.value).forEach(diaKey => {
+        const ucs = ucsSalvas.value[diaKey];
+        if (ucs.length === 0) {
+          selectedPeriodo.value[diaKey] = null;
+          return;
+        }
+
+        let hasManha = false;
+        let hasTarde = false;
+        let hasNoite = false;
+
+        ucs.forEach(item => {
+          const p = item.periodo.trim();
+          const pUpper = p.toUpperCase();
+          const pLower = p.toLowerCase();
+
+          if (pUpper === 'INT_MT' || pLower.includes('manhã + tarde') || pLower.includes('manha + tarde')) {
+            hasManha = true;
+            hasTarde = true;
+          } else if (pUpper === 'INT_MN' || pLower.includes('manhã + noite') || pLower.includes('manha + noite')) {
+            hasManha = true;
+            hasNoite = true;
+          } else if (pUpper === 'INT_TN' || pLower.includes('tarde + noite')) {
+            hasTarde = true;
+            hasNoite = true;
+          } else if (pLower.includes('integral') || pUpper === 'INT' || pUpper === 'INTEGRAL') {
+            hasManha = true;
+            hasTarde = true;
+          } else if (pLower.startsWith('m') || pUpper === 'MANHÃ' || pUpper === 'MANHA') {
+            hasManha = true;
+          } else if (pLower.startsWith('t') || pUpper === 'TARDE') {
+            hasTarde = true;
+          } else if (pLower.startsWith('n') || pUpper === 'NOITE') {
+            hasNoite = true;
+          }
+        });
+
+        if (hasManha && hasTarde) {
+          selectedPeriodo.value[diaKey] = 'INT_MT';
+        } else if (hasManha && hasNoite) {
+          selectedPeriodo.value[diaKey] = 'INT_MN';
+        } else if (hasTarde && hasNoite) {
+          selectedPeriodo.value[diaKey] = 'INT_TN';
+        } else if (hasManha) {
+          selectedPeriodo.value[diaKey] = 'manha';
+        } else if (hasTarde) {
+          selectedPeriodo.value[diaKey] = 'tarde';
+        } else if (hasNoite) {
+          selectedPeriodo.value[diaKey] = 'noite';
+        }
       });
     }
   }
