@@ -37,6 +37,7 @@ const form = ref({
   dataFim: "",
   aulasSemana: 0,
   totalAulas: 0,
+  descricao: "",
 });
 
 const todosOpps = ref([]);
@@ -257,6 +258,7 @@ watch(() => props.turma, (newTurma) => {
       dataFim: newTurma.dataTerminoISO || newTurma.dataFim || "",
       aulasSemana: newTurma.aulasSemana || 4,
       totalAulas: newTurma.totalAulas || 16,
+      descricao: newTurma.descricao || "",
     };
 
     // Mapear a grade existente para o formato do addTurmas
@@ -811,6 +813,13 @@ function salvar() {
                 <v-text-field v-model="form.totalAulas" type="number" variant="filled" density="compact"
                   hide-details readonly></v-text-field>
               </div>
+            </div>
+
+            <!-- Descrição -->
+            <div class="mt-4">
+              <p class="mb-1 font-bold text-xs text-gray-500 uppercase">Descrição (Opcional)</p>
+              <v-textarea v-model="form.descricao" label="..." rows="3" variant="filled" density="compact"
+                hide-details></v-textarea>
             </div>
           </div>
         </div>

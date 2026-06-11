@@ -97,6 +97,7 @@ async function salvarTurma(form) {
             horarios: form.horarios,
             idOPP: form.idOPP,
             idArea: form.idArea,
+            descricao: form.descricao,
         });
         
         // Atualiza a turma localmente na lista sem precisar fazer um fetch pesado de todas as turmas
@@ -113,6 +114,17 @@ async function salvarTurma(form) {
         showAlert(formatarErro(e.message) || "Erro ao salvar turma", "error", "mdi-alert-circle");
     } finally {
         salvando.value = false;
+    }
+}
+
+async function salvarDescricaoTurma(turma) {
+    try {
+        await editarTurma(turma.idTurma, {
+            descricao: turma.descricao
+        });
+        showAlert("Descrição salva com sucesso!", "success");
+    } catch (e) {
+        showAlert(formatarErro(e.message) || "Erro ao salvar descrição", "error", "mdi-alert-circle");
     }
 }
 
@@ -170,11 +182,26 @@ const filteredTurmas = computed(() => {
     // DIDÁTICA: Como 'turmas' agora é uma 'ref', precisamos acessar '.value'
     return turmas.value.filter(turma => {
         
-        const matchesPeriod = selectedPeriod.value === "Todas" || 
-                            (selectedPeriod.value === "Manhã" && turma.siglas.startsWith('M')) ||
-                            (selectedPeriod.value === "Tarde" && turma.siglas.startsWith('T')) ||
-                            (selectedPeriod.value === "Noite" && turma.siglas.startsWith('N')) ||
-                            (selectedPeriod.value === "Integral" && turma.siglas === 'INT');
+        // Obtém todos os períodos distintos presentes na grade da turma (ou na sigla de fallback)
+        const periodosTurma = turma.grade && turma.grade.length
+            ? turma.grade.map(g => g.periodo.toUpperCase())
+            : [ (turma.siglas || "").toUpperCase() ];
+
+        const matchesPeriod = selectedPeriod.value === "Todas" || periodosTurma.some(p => {
+            if (selectedPeriod.value === "Manhã") {
+                return p.startsWith('M') || p.includes('INT_M');
+            }
+            if (selectedPeriod.value === "Tarde") {
+                return p.startsWith('T') || p.includes('INT_T');
+            }
+            if (selectedPeriod.value === "Noite") {
+                return p.startsWith('N') || p.includes('INT_N');
+            }
+            if (selectedPeriod.value === "Integral") {
+                return p === 'INT' || p === 'INTEGRAL' || p.startsWith('INT_');
+            }
+            return false;
+        });
 
        
         const term = search.value.trim().toLowerCase();
@@ -285,8 +312,8 @@ const filteredTurmas = computed(() => {
         </div>
 
         <!-- Grade de cards ou Estado Vazio -->
-        <div v-if="filteredTurmas.length > 0" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-5">
-            <v-card v-for="turma in filteredTurmas" :key="turma.value" class="border-t-6 h-full flex flex-col justify-between"
+        <div v-if="filteredTurmas.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
+            <v-card v-for="turma in filteredTurmas" :key="turma.value" class="border-t-6 h-full flex flex-col justify-between max-w-[400px] w-full"
                 :class="{ 'border-green-300': turma.modalidade === 'cai', 'border-blue-300': turma.modalidade === 'fic', 'border-orange-300': turma.modalidade === 'tec' }">
                 <div class="flex-grow">
                     <v-card-title class="flex justify-between">
@@ -355,9 +382,8 @@ const filteredTurmas = computed(() => {
                         </div>
                     </div>
                     <p v-else class="mx-3 mb-3 text-sm text-gray-500">Nenhum professor designado</p>
-                    <v-divider :thickness="4" class="my-1 mx-3"></v-divider>
                     <p class="ms-3 text-sm my-2 font-bold">Descrição <span class="text-gray-500 font-normal">(Opcional)</span></p>
-                    <v-textarea label="..." rows="4" hide-details class="mx-3 mt-2 text-sm mb-3"></v-textarea>
+                    <v-textarea v-model="turma.descricao" label="..." rows="2" hide-details class="mx-3 mt-2 text-sm mb-3" @blur="salvarDescricaoTurma(turma)"></v-textarea>
                     <v-divider :thickness="4" class="my-1 mx-3"></v-divider>
 
                     <!-- Grade de Horário Acoplada no Card -->

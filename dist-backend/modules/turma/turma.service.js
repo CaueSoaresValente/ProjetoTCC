@@ -1,4 +1,3 @@
-import { In } from 'typeorm';
 import { AppDataSource } from '../../config/data-source.js';
 import { OPP } from '../opp/opp.entity.js';
 import { OPPArea } from '../area/opp-area.entity.js';
@@ -114,6 +113,8 @@ export class TurmaService {
             updateData.dataTermino = new Date(dados.dataTermino);
         if (dados.idOPP && usuario.funcao === 'gestor')
             updateData.idOPP = dados.idOPP;
+        if (dados.descricao !== undefined)
+            updateData.descricao = dados.descricao;
         // Se mudou data ou horários, recalculamos aulasSemana e totalAulas
         const dataInicioFinal = dados.dataInicio ? new Date(dados.dataInicio) : turma.dataInicio;
         const dataTerminoFinal = dados.dataTermino ? new Date(dados.dataTermino) : turma.dataTermino;
@@ -135,7 +136,8 @@ export class TurmaService {
         const horariosFinais = horariosForamPassados ? horariosResolvidos : (turma.turmaUCs || []);
         updateData.aulasSemana = this.contarDiasUnicos(horariosFinais);
         updateData.totalAulas = this.calcularTotalAulas(dataInicioFinal, dataTerminoFinal, horariosFinais);
-        const atualizada = await this.repo.update(idTurma, updateData);
+        await this.repo.update(idTurma, updateData);
+        const atualizada = await this.repo.findById(idTurma);
         return atualizada ? this.mapTurmaParaCard(atualizada) : null;
     }
     async excluir(idTurma, usuario) {
@@ -175,27 +177,15 @@ export class TurmaService {
     async resolverHorarios(horarios, idArea) {
         const ucRepo = AppDataSource.getRepository(UnidadeCurricular);
         const resolvidos = [];
-        // Buscar nomes de UCs a serem resolvidas em lote
-        const nomesParaBuscar = horarios
-            .filter(h => !h.idUC && h.nomeUC)
-            .map(h => h.nomeUC);
-        const ucMap = new Map();
-        if (nomesParaBuscar.length > 0) {
-            const ucs = await ucRepo.find({
-                where: { nome: In(nomesParaBuscar) }
-            });
-            for (const uc of ucs) {
-                ucMap.set(uc.nome.toLowerCase(), uc.idUC);
-            }
-        }
         for (const h of horarios) {
             let idUC = h.idUC;
             if (!idUC && h.nomeUC) {
-                const ucNomeLower = h.nomeUC.toLowerCase();
-                idUC = ucMap.get(ucNomeLower);
-                if (!idUC) {
+                // Buscamos a UC pelo nome. Removido o filtro por idArea para permitir UCs de qualquer área.
+                const uc = await ucRepo.findOne({ where: { nome: h.nomeUC } });
+                if (!uc) {
                     throw new Error(`Unidade curricular "${h.nomeUC}" não encontrada`);
                 }
+                idUC = uc.idUC;
             }
             if (!idUC) {
                 throw new Error('Cada horário precisa de idUC ou nomeUC');

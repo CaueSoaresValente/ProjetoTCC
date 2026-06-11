@@ -22,6 +22,7 @@ interface CriarTurmaInput {
     aulasSemana?: number;
     totalAulas?: number;
     horarios: HorarioInput[];
+    descricao?: string;
 }
 export declare class TurmaService {
     private repo;

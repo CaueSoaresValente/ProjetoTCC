@@ -20,6 +20,7 @@ let Turma = class Turma {
     aulasSemana;
     totalAulas;
     status;
+    descricao;
     criador;
     opp;
     turmaUCs;
@@ -55,6 +56,9 @@ __decorate([
 __decorate([
     Column({ type: 'boolean', default: true })
 ], Turma.prototype, "status", void 0);
+__decorate([
+    Column({ type: 'text', nullable: true })
+], Turma.prototype, "descricao", void 0);
 __decorate([
     ManyToOne(() => Cadastro, { nullable: false }),
     JoinColumn({ name: 'id_criador' })
