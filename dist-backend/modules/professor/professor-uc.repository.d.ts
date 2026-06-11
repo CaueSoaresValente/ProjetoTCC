@@ -5,6 +5,7 @@ export declare class ProfessorUCRepository {
     private ucRepo;
     findByProfessor(idProfessor: number): Promise<ProfessorUC[]>;
     findUCsByArea(idArea: number): Promise<UnidadeCurricular[]>;
+    findById(id: number): Promise<ProfessorUC | null>;
     findByProfessorAndUC(idProfessor: number, idUC: number): Promise<ProfessorUC | null>;
     create(idProfessor: number, idUC: number, nivelCompetencia: number): Promise<ProfessorUC>;
     update(id: number, data: Partial<ProfessorUC>): Promise<ProfessorUC | null>;

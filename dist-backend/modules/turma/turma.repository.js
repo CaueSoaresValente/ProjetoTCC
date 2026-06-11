@@ -30,6 +30,30 @@ export class TurmaRepository {
             order: { idTurma: 'DESC' },
         });
     }
+    async findByOPPAreas(idOPP, idsAreas) {
+        if (idsAreas.length === 0) {
+            return this.repo.find({
+                where: { status: true, idOPP },
+                relations: [...RELATIONS],
+                order: { idTurma: 'DESC' },
+            });
+        }
+        return this.repo.createQueryBuilder('turma')
+            .leftJoinAndSelect('turma.criador', 'criador')
+            .leftJoinAndSelect('turma.opp', 'opp')
+            .leftJoinAndSelect('opp.cadastro', 'oppCadastro')
+            .leftJoinAndSelect('turma.turmaUCs', 'turmaUCs')
+            .leftJoinAndSelect('turmaUCs.unidadeCurricular', 'unidadeCurricular')
+            .leftJoinAndSelect('unidadeCurricular.area', 'area')
+            .leftJoinAndSelect('turma.professorTurmas', 'professorTurmas')
+            .leftJoinAndSelect('professorTurmas.professor', 'professor')
+            .leftJoinAndSelect('professor.cadastro', 'professorCadastro')
+            .leftJoinAndSelect('professorTurmas.turmaUC', 'turmaUC')
+            .where('turma.status = :status', { status: true })
+            .andWhere('(turma.idOPP = :idOPP OR unidadeCurricular.idArea IN (:...idsAreas))', { idOPP, idsAreas })
+            .orderBy('turma.idTurma', 'DESC')
+            .getMany();
+    }
     async findById(idTurma) {
         return this.repo.createQueryBuilder('turma')
             .leftJoinAndSelect('turma.criador', 'criador')

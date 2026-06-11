@@ -23,7 +23,6 @@ interface CriarTurmaInput {
     totalAulas?: number;
     descricao?: string;
     horarios: HorarioInput[];
-    descricao?: string;
 }
 export declare class TurmaService {
     private repo;
@@ -248,6 +247,27 @@ export declare class TurmaService {
      */
     private mapearPeriodoParaDisponibilidade;
     private obterHorasDoPeriodo;
+    /**
+     * Decompõe um período em sub-períodos atômicos.
+     * Exemplos:
+     *   'Manhã'       → ['M01', 'M02']
+     *   'Tarde'       → ['T01', 'T02']
+     *   'Noite'       → ['N01', 'N02']
+     *   'INT_MT'      → ['M01', 'M02', 'T01', 'T02']
+     *   'M01'         → ['M01']
+     */
+    private decomporPeriodo;
+    /**
+     * Verifica se dois períodos têm sobreposição de horário.
+     * Ex: 'Tarde' e 'INT_MT' → true (ambos contêm T01/T02)
+     *     'Manhã' e 'Tarde' → false (sem interseção)
+     */
+    private periodosSeOverlap;
+    /**
+     * Verifica se dois intervalos de datas se sobrepõem.
+     * Turmas com datas que não se cruzam não geram conflito.
+     */
+    private datasSeOverlap;
 }
 export {};
 //# sourceMappingURL=turma.service.d.ts.map

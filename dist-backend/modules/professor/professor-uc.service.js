@@ -9,6 +9,9 @@
 // ============================================================
 import { ProfessorUCRepository } from './professor-uc.repository.js';
 import { WebSocketManager } from '../../shared/websocket.manager.js';
+import { AppDataSource } from '../../config/data-source.js';
+import { ProfessorTurma } from '../turma/professor-turma.entity.js';
+import { TurmaUC } from '../turma/turma-uc.entity.js';
 export class ProfessorUCService {
     repo = new ProfessorUCRepository();
     // Lista todas as UCs de um professor
@@ -50,8 +53,30 @@ export class ProfessorUCService {
         WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
         return result;
     }
-    // Remove o vínculo
+    // Remove o vínculo e desaloca o professor de todas as turmas com essa UC
     async delete(id) {
+        // 1. Buscar o vínculo para saber idProfessor e idUC
+        const vinculo = await this.repo.findById(id);
+        if (vinculo) {
+            const { idProfessor, idUC } = vinculo;
+            // 2. Buscar todos os slots de turma (turma_uc) com essa UC
+            const turmaUCRepo = AppDataSource.getRepository(TurmaUC);
+            const slotsDaUC = await turmaUCRepo.find({ where: { idUC } });
+            if (slotsDaUC.length > 0) {
+                const idsTurmaUC = slotsDaUC.map(s => s.idTurmaUC);
+                // 3. Remover todas as alocações do professor nesses slots
+                const profTurmaRepo = AppDataSource.getRepository(ProfessorTurma);
+                const alocacoes = await profTurmaRepo
+                    .createQueryBuilder('pt')
+                    .where('pt.idProfessor = :idProfessor', { idProfessor })
+                    .andWhere('pt.idTurmaUC IN (:...idsTurmaUC)', { idsTurmaUC })
+                    .getMany();
+                if (alocacoes.length > 0) {
+                    await profTurmaRepo.remove(alocacoes);
+                }
+            }
+        }
+        // 4. Remover o vínculo professor_uc
         const result = await this.repo.delete(id);
         WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
         WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });

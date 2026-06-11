@@ -65,7 +65,6 @@ interface CriarTurmaInput {
   totalAulas?: number;
   descricao?: string;
   horarios: HorarioInput[];
-  descricao?: string;
 }
 
 export class TurmaService {
@@ -167,11 +166,7 @@ export class TurmaService {
     if (dados.dataInicio) updateData.dataInicio = new Date(dados.dataInicio);
     if (dados.dataTermino) updateData.dataTermino = new Date(dados.dataTermino);
     if (dados.idOPP && usuario.funcao === 'gestor') updateData.idOPP = dados.idOPP;
-<<<<<<< HEAD
-    if (dados.descricao !== undefined) updateData.descricao = dados.descricao;
-=======
     if (dados.descricao !== undefined) updateData.descricao = dados.descricao?.trim() || null;
->>>>>>> 2c1e2bd2a9fc3e791b71526861ddabcb78594b4b
 
     // Se mudou data ou horários, recalculamos aulasSemana e totalAulas
     const dataInicioFinal = dados.dataInicio ? new Date(dados.dataInicio) : turma.dataInicio;
@@ -202,17 +197,11 @@ export class TurmaService {
     updateData.aulasSemana = this.contarDiasUnicos(horariosFinais);
     updateData.totalAulas = this.calcularTotalAulas(dataInicioFinal, dataTerminoFinal, horariosFinais);
 
-<<<<<<< HEAD
-    await this.repo.update(idTurma, updateData);
-
-    const atualizada = await this.repo.findById(idTurma);
-=======
     const atualizada = await this.repo.update(idTurma, updateData);
     if (atualizada) {
       WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
       WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
     }
->>>>>>> 2c1e2bd2a9fc3e791b71526861ddabcb78594b4b
     return atualizada ? this.mapTurmaParaCard(atualizada) : null;
   }
 

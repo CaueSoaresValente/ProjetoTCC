@@ -39,9 +39,6 @@ export class Turma {
   @Column({ type: 'boolean', default: true })
   status: boolean;
 
-  @Column({ type: 'text', nullable: true })
-  descricao: string | null;
-
   @ManyToOne(() => Cadastro, { nullable: false })
   @JoinColumn({ name: 'id_criador' })
   criador: Cadastro;

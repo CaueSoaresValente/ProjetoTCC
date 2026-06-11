@@ -36,11 +36,16 @@ export class TurmaService {
     async listar(usuario, filtros = {}) {
         let turmas;
         if (usuario.funcao === 'opp') {
-            const idOPP = await this.resolverIdOPP(usuario.idUsuario);
-            if (!idOPP) {
+            const oppRepo = AppDataSource.getRepository(OPP);
+            const opp = await oppRepo.findOne({
+                where: { idCadastro: usuario.idUsuario, status: true },
+                relations: ['oppAreas'],
+            });
+            if (!opp) {
                 throw new Error('OPP não encontrado para este cadastro');
             }
-            turmas = await this.repo.findByOPP(idOPP);
+            const idsAreas = opp.oppAreas?.map(oa => oa.idArea) || [];
+            turmas = await this.repo.findByOPPAreas(opp.idOPP, idsAreas);
         }
         else {
             turmas = await this.repo.findAll();
@@ -119,11 +124,7 @@ export class TurmaService {
         if (dados.idOPP && usuario.funcao === 'gestor')
             updateData.idOPP = dados.idOPP;
         if (dados.descricao !== undefined)
-<<<<<<< HEAD
-            updateData.descricao = dados.descricao;
-=======
             updateData.descricao = dados.descricao?.trim() || null;
->>>>>>> 2c1e2bd2a9fc3e791b71526861ddabcb78594b4b
         // Se mudou data ou horários, recalculamos aulasSemana e totalAulas
         const dataInicioFinal = dados.dataInicio ? new Date(dados.dataInicio) : turma.dataInicio;
         const dataTerminoFinal = dados.dataTermino ? new Date(dados.dataTermino) : turma.dataTermino;
@@ -145,16 +146,11 @@ export class TurmaService {
         const horariosFinais = horariosForamPassados ? horariosResolvidos : (turma.turmaUCs || []);
         updateData.aulasSemana = this.contarDiasUnicos(horariosFinais);
         updateData.totalAulas = this.calcularTotalAulas(dataInicioFinal, dataTerminoFinal, horariosFinais);
-<<<<<<< HEAD
-        await this.repo.update(idTurma, updateData);
-        const atualizada = await this.repo.findById(idTurma);
-=======
         const atualizada = await this.repo.update(idTurma, updateData);
         if (atualizada) {
             WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
             WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
         }
->>>>>>> 2c1e2bd2a9fc3e791b71526861ddabcb78594b4b
         return atualizada ? this.mapTurmaParaCard(atualizada) : null;
     }
     async excluir(idTurma, usuario) {
@@ -464,7 +460,10 @@ export class TurmaService {
             for (const pt of turmasDoProf) {
                 if (!pt.turma?.status)
                     continue;
-                if (pt.turmaUC && pt.turmaUC.diaSemana.toLowerCase() === diaNorm && pt.turmaUC.periodo === periodo) {
+                if (pt.turmaUC &&
+                    pt.turmaUC.diaSemana.toLowerCase() === diaNorm &&
+                    this.periodosSeOverlap(pt.turmaUC.periodo, periodo) &&
+                    this.datasSeOverlap(turma.dataInicio, turma.dataTermino, pt.turma.dataInicio, pt.turma.dataTermino)) {
                     temConflito = true;
                     break;
                 }
@@ -543,6 +542,22 @@ export class TurmaService {
         if (!slotTurmaUC)
             throw new Error('Slot não encontrado na grade da turma');
         const profTurmaRepo = AppDataSource.getRepository(ProfessorTurma);
+        // Verificar conflito de horário antes de alocar (revalidação)
+        const turmasDoProf = await profTurmaRepo.find({
+            where: { idProfessor, status: true },
+            relations: ['turmaUC', 'turma'],
+        });
+        for (const pt of turmasDoProf) {
+            if (!pt.turma?.status)
+                continue;
+            if (pt.turmaUC &&
+                pt.turmaUC.diaSemana.toLowerCase() === diaSemana.toLowerCase() &&
+                this.periodosSeOverlap(pt.turmaUC.periodo, periodo) &&
+                this.datasSeOverlap(turma.dataInicio, turma.dataTermino, pt.turma.dataInicio, pt.turma.dataTermino)) {
+                throw new Error(`Conflito de horário: professor já está alocado em "${pt.turma.nome || 'outra turma'}" ` +
+                    `no mesmo dia (${diaSemana}) com período sobreposto (${pt.turmaUC.periodo})`);
+            }
+        }
         // Verificar se já existe alguém neste slot
         const existeNoSlot = await profTurmaRepo.findOne({
             where: { idTurmaUC: slotTurmaUC.idTurmaUC, status: true },
@@ -639,6 +654,64 @@ export class TurmaService {
             return 4;
         }
         return 2;
+    }
+    // ============================================================
+    // VERIFICAÇÃO DE CONFLITOS — Sobreposição de períodos e datas
+    // ============================================================
+    /**
+     * Decompõe um período em sub-períodos atômicos.
+     * Exemplos:
+     *   'Manhã'       → ['M01', 'M02']
+     *   'Tarde'       → ['T01', 'T02']
+     *   'Noite'       → ['N01', 'N02']
+     *   'INT_MT'      → ['M01', 'M02', 'T01', 'T02']
+     *   'M01'         → ['M01']
+     */
+    decomporPeriodo(periodo) {
+        const p = periodo.toUpperCase().replace(/\s/g, '');
+        const MANHA = ['M01', 'M02'];
+        const TARDE = ['T01', 'T02'];
+        const NOITE = ['N01', 'N02'];
+        // Sub-períodos atômicos
+        if (['M01', 'M02', 'T01', 'T02', 'N01', 'N02'].includes(p))
+            return [p];
+        // Períodos completos
+        if (p === 'MANHÃ' || p === 'MANHA')
+            return MANHA;
+        if (p === 'TARDE')
+            return TARDE;
+        if (p === 'NOITE')
+            return NOITE;
+        // Integrais
+        if (p === 'INT_MT' || p === 'INT' || p === 'INTEGRAL' || p === 'MANHÃ+TARDE' || p === 'MANHA+TARDE')
+            return [...MANHA, ...TARDE];
+        if (p === 'INT_TN' || p === 'TARDE+NOITE')
+            return [...TARDE, ...NOITE];
+        if (p === 'INT_MN' || p === 'MANHÃ+NOITE' || p === 'MANHA+NOITE')
+            return [...MANHA, ...NOITE];
+        // Fallback
+        return [p];
+    }
+    /**
+     * Verifica se dois períodos têm sobreposição de horário.
+     * Ex: 'Tarde' e 'INT_MT' → true (ambos contêm T01/T02)
+     *     'Manhã' e 'Tarde' → false (sem interseção)
+     */
+    periodosSeOverlap(periodoA, periodoB) {
+        const subA = this.decomporPeriodo(periodoA);
+        const subB = this.decomporPeriodo(periodoB);
+        return subA.some(s => subB.includes(s));
+    }
+    /**
+     * Verifica se dois intervalos de datas se sobrepõem.
+     * Turmas com datas que não se cruzam não geram conflito.
+     */
+    datasSeOverlap(inicioA, terminoA, inicioB, terminoB) {
+        const a0 = new Date(inicioA).getTime();
+        const a1 = new Date(terminoA).getTime();
+        const b0 = new Date(inicioB).getTime();
+        const b1 = new Date(terminoB).getTime();
+        return a0 <= b1 && b0 <= a1;
     }
 }
 //# sourceMappingURL=turma.service.js.map

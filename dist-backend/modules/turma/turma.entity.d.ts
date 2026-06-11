@@ -14,7 +14,6 @@ export declare class Turma {
     totalAulas: number;
     descricao: string | null;
     status: boolean;
-    descricao: string | null;
     criador: Cadastro;
     opp: OPP | null;
     turmaUCs: TurmaUC[];

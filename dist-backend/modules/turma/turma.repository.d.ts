@@ -4,6 +4,7 @@ export declare class TurmaRepository {
     private turmaUCRepo;
     findAll(): Promise<Turma[]>;
     findByOPP(idOPP: number): Promise<Turma[]>;
+    findByOPPAreas(idOPP: number, idsAreas: number[]): Promise<Turma[]>;
     findById(idTurma: number): Promise<Turma | null>;
     create(data: Partial<Turma>): Promise<Turma>;
     saveHorarios(idTurma: number, horarios: {
