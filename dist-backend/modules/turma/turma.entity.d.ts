@@ -5,17 +5,18 @@ import { TurmaUC } from './turma-uc.entity.js';
 export declare class Turma {
     idTurma: number;
     idCriador: number;
-    idOPP: number;
+    idOPP: number | null;
     nome: string;
     tipoCurso: string;
     dataInicio: Date;
     dataTermino: Date;
     aulasSemana: number;
     totalAulas: number;
+    descricao: string | null;
     status: boolean;
     descricao: string | null;
     criador: Cadastro;
-    opp: OPP;
+    opp: OPP | null;
     turmaUCs: TurmaUC[];
     professorTurmas: ProfessorTurma[];
 }

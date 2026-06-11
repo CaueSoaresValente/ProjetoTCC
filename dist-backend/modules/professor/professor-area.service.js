@@ -9,6 +9,7 @@
 // O fluxo é: Controller → Service (aqui) → Repository → Banco
 // ============================================================
 import { ProfessorAreaRepository } from './professor-area.repository.js';
+import { WebSocketManager } from '../../shared/websocket.manager.js';
 export class ProfessorAreaService {
     // Instancia o repository para usar os métodos de banco
     repo = new ProfessorAreaRepository();
@@ -27,18 +28,27 @@ export class ProfessorAreaService {
         if (jaExiste) {
             throw new Error('O professor já possui essa área de atuação');
         }
-        return await this.repo.create(idProfessor, idArea);
+        const result = await this.repo.create(idProfessor, idArea);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+        return result;
     }
     // Atualiza o vínculo (troca a área)
     async update(id, idArea) {
         if (!idArea) {
             throw new Error('O ID da área é obrigatório');
         }
-        return await this.repo.update(id, idArea);
+        const result = await this.repo.update(id, idArea);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+        return result;
     }
     // Remove o vínculo
     async delete(id) {
-        return await this.repo.delete(id);
+        const result = await this.repo.delete(id);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+        return result;
     }
 }
 //# sourceMappingURL=professor-area.service.js.map

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, computed } from "vue";
+import { ref, onMounted, watch, computed, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { criarTurma, listarUCsPorArea, getUsuarioLogado, listarAreas, listarOpps, listarCompetencias } from "@/services/api";
 
@@ -344,6 +344,19 @@ const filteredCompetencias = computed(() => {
   return list;
 });
 
+const areasParaFiltroUC = computed(() => {
+  const mapaAreas = new Map();
+  for (const uc of todasUnidadesCurriculares.value) {
+    if (uc.idArea && !mapaAreas.has(uc.idArea)) {
+      mapaAreas.set(uc.idArea, {
+        title: uc.areaNome || `Área ${uc.idArea}`,
+        value: uc.idArea
+      });
+    }
+  }
+  return Array.from(mapaAreas.values());
+});
+
 function abrirModal(diaValue) {
   diaDoModal.value = diaValue;
   buscaUC.value = "";
@@ -482,6 +495,7 @@ watch(selectedAreas, async (novaAreaId) => {
 // pelo Vue.js assim que este componente (página) aparece na tela.
 // É o local ideal para fazermos a conexão com o backend (API).
 // --------------------------------------------------------
+let wsListener = null;
 onMounted(async () => {
   await carregarAreas();
   await carregarOpps();
@@ -496,6 +510,24 @@ onMounted(async () => {
       // Alimentamos a lista de OPPs com o próprio usuário por padrão, mas permitiremos mudar se for o caso
       oppsResponsavel.value = [{ label: oppLogado.cadastro.nome, value: oppLogado.idOPP }];
     }
+  }
+
+  wsListener = (event) => {
+    const detail = event.detail;
+    if (detail.entity === 'areas') {
+      carregarAreas();
+    } else if (detail.entity === 'competencias') {
+      carregarTodasUCs();
+    } else if (detail.entity === 'cadastros') {
+      carregarOpps();
+    }
+  };
+  window.addEventListener('websocket-data-updated', wsListener);
+});
+
+onBeforeUnmount(() => {
+  if (wsListener) {
+    window.removeEventListener('websocket-data-updated', wsListener);
   }
 });
 
@@ -515,6 +547,7 @@ async function carregarTodasUCs() {
         idUC: uc.idUC,
         nome: uc.nome,
         idArea: uc.idArea,
+        areaNome: uc.area?.nome || '',
         carga: carga || undefined
       };
     });
@@ -956,7 +989,7 @@ function isIntegral(periodo) {
               {{ dia.label }}
             </p>
             <v-card variant="outlined"
-              class="rounded-md pa-4 h-[250px] flex flex-col border-gray-300 dark:border-gray-600">
+              class="rounded-md pa-4 h-[270px] flex flex-col border-gray-300 dark:border-gray-600">
               <div class="flex-1">
                 <div v-if="selectedPeriodo[dia.value]" class="flex flex-col items-center">
                   <!-- Se for Manhã -->
@@ -1108,7 +1141,7 @@ function isIntegral(periodo) {
       <div class="px-6 space-y-3 mb-4">
         <div>
           <p class="mb-1 font-bold text-[12px] text-gray-500 uppercase tracking-wide">Filtrar por Área</p>
-          <v-select v-model="areaFiltroModal" :items="areasDisponiveis" item-title="title" item-value="value"
+          <v-select v-model="areaFiltroModal" :items="areasParaFiltroUC" item-title="title" item-value="value"
             placeholder="Selecione a área..." variant="filled" density="compact" hide-details clearable></v-select>
         </div>
         
@@ -1124,11 +1157,11 @@ function isIntegral(periodo) {
         <div v-for="(uc, index) in filteredCompetencias" :key="uc.idUC" class="flex items-center gap-2 mb-4">
           <v-checkbox :model-value="isUCSelected(uc.idUC)" @update:model-value="toggleUCSelection(uc)"
             :label="uc.carga ? uc.nome + ' (' + uc.carga + ')' : uc.nome" color="red" hide-details density="compact"
-            :disabled="!isUCSelected(uc.idUC) && periodosDisponiveisPara(uc.nome).length === 0"
+            :disabled="!isUCSelected(uc.idUC) && periodosDisponiveisPara(uc.idUC).length === 0"
             class="flex-1"></v-checkbox>
           
           <v-select v-if="isUCSelected(uc.idUC)" :model-value="getSelectedUCPeriod(uc.idUC)"
-            @update:model-value="updateUCPeriod(uc.idUC, $event)" :items="periodosDisponiveisPara(uc.nome)" label="Período"
+            @update:model-value="updateUCPeriod(uc.idUC, $event)" :items="periodosDisponiveisPara(uc.idUC)" label="Período"
             variant="outlined" density="compact" hide-details class="max-w-[130px]"></v-select>
         </div>
         <div v-if="filteredCompetencias.length === 0" class="text-center py-10 text-gray-400 font-bold uppercase text-xs">
@@ -1139,10 +1172,10 @@ function isIntegral(periodo) {
       <!-- Botões de Ação - Padronizados -->
       <v-card-actions class="px-6 py-6 pt-2">
         <v-spacer></v-spacer>
-        <v-btn variant="outlined" color="red" class="px-6 text-none font-bold" @click="fecharModal()">
+        <v-btn variant="elevated" color="grey-lighten-2" class="font-bold px-6 text-none text-gray-800" @click="fecharModal()">
           Cancelar
         </v-btn>
-        <v-btn color="red" class="bg-red-600 text-white px-8 text-none font-bold shadow-md" @click="salvarUCs()">
+        <v-btn variant="elevated" color="red" class="bg-red-600 text-white px-8 text-none font-bold" @click="salvarUCs()">
           Salvar Seleção
         </v-btn>
       </v-card-actions>

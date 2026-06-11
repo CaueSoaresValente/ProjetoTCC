@@ -3,7 +3,7 @@ export declare class UnidadeCurricularService {
     private repo;
     findAll(): Promise<UnidadeCurricular[]>;
     findById(id: number): Promise<UnidadeCurricular | null>;
-    create(data: Partial<UnidadeCurricular>): Promise<UnidadeCurricular>;
+    create(data: Partial<UnidadeCurricular>): Promise<UnidadeCurricular | null>;
     update(id: number, data: Partial<UnidadeCurricular>): Promise<UnidadeCurricular | null>;
     delete(id: number): Promise<void>;
 }

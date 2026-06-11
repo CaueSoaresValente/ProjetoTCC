@@ -21,6 +21,7 @@ interface CriarTurmaInput {
     idArea?: number;
     aulasSemana?: number;
     totalAulas?: number;
+    descricao?: string;
     horarios: HorarioInput[];
     descricao?: string;
 }
@@ -52,12 +53,13 @@ export declare class TurmaService {
         dataTerminoISO: string;
         criadorNome: string;
         oppNome: string;
-        idOPP: number;
+        idOPP: number | null;
         professores: {
             idProfessor: number;
             nome: string;
             foto: string;
         }[];
+        descricao: string;
     }[]>;
     criar(usuario: UsuarioToken, dados: CriarTurmaInput): Promise<{
         idTurma: number;
@@ -85,12 +87,13 @@ export declare class TurmaService {
         dataTerminoISO: string;
         criadorNome: string;
         oppNome: string;
-        idOPP: number;
+        idOPP: number | null;
         professores: {
             idProfessor: number;
             nome: string;
             foto: string;
         }[];
+        descricao: string;
     }>;
     atualizar(idTurma: number, usuario: UsuarioToken, dados: Partial<CriarTurmaInput>): Promise<{
         idTurma: number;
@@ -118,12 +121,13 @@ export declare class TurmaService {
         dataTerminoISO: string;
         criadorNome: string;
         oppNome: string;
-        idOPP: number;
+        idOPP: number | null;
         professores: {
             idProfessor: number;
             nome: string;
             foto: string;
         }[];
+        descricao: string;
     } | null>;
     excluir(idTurma: number, usuario: UsuarioToken): Promise<boolean>;
     private verificarPermissao;
@@ -153,6 +157,7 @@ export declare class TurmaService {
         idProfessor: number;
         nome: string;
         email: string;
+        fotoPerfil: string;
         ocupacao: number;
         nivelCompetencia: number;
         areas: {
@@ -190,12 +195,13 @@ export declare class TurmaService {
         dataTerminoISO: string;
         criadorNome: string;
         oppNome: string;
-        idOPP: number;
+        idOPP: number | null;
         professores: {
             idProfessor: number;
             nome: string;
             foto: string;
         }[];
+        descricao: string;
     } | null>;
     /**
      * Remove um professor de uma turma.
@@ -228,12 +234,13 @@ export declare class TurmaService {
         dataTerminoISO: string;
         criadorNome: string;
         oppNome: string;
-        idOPP: number;
+        idOPP: number | null;
         professores: {
             idProfessor: number;
             nome: string;
             foto: string;
         }[];
+        descricao: string;
     } | null>;
     /**
      * Mapeia um período de turma_uc (M01, T01, etc.) para o período

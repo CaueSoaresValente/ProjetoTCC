@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useTheme } from "vuetify";
 import { buscarMeuCalendario } from "@/services/api";
 
@@ -34,7 +34,7 @@ const iniciarAnimacaoOcupacao = (alvo) => {
   }, intervalo);
 };
 
-onMounted(async () => {
+const carregarCalendario = async () => {
   try {
     const dados = await buscarMeuCalendario();
     todasAsAulas.value = dados.aulas || [];
@@ -44,6 +44,27 @@ onMounted(async () => {
     console.error("Erro ao carregar dados do calendário:", error);
   } finally {
     carregando.value = false;
+  }
+};
+
+let wsListener;
+
+onMounted(async () => {
+  await carregarCalendario();
+
+  wsListener = (event) => {
+    const detail = event.detail;
+    if (detail.entity === 'turmas' || detail.entity === 'professores') {
+      console.log("🔄 Recarregando calendário do professor em tempo real...");
+      carregarCalendario();
+    }
+  };
+  window.addEventListener('websocket-data-updated', wsListener);
+});
+
+onBeforeUnmount(() => {
+  if (wsListener) {
+    window.removeEventListener('websocket-data-updated', wsListener);
   }
 });
 

@@ -8,6 +8,7 @@
 
 import { CertificacaoRepository } from './certificacao.repository.js';
 import { Certificacao } from './certificacao.entity.js';
+import { WebSocketManager } from '../../shared/websocket.manager.js';
 
 export class CertificacaoService {
   private repo = new CertificacaoRepository();
@@ -25,10 +26,13 @@ export class CertificacaoService {
     }
 
     // Montamos o objeto completo com o idProfessor
-    return await this.repo.create({
+    const result = await this.repo.create({
       ...data,
       idProfessor,
     });
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+    return result;
   }
 
   // Atualiza uma certificação existente
@@ -37,11 +41,17 @@ export class CertificacaoService {
     if (data.nome !== undefined && data.nome.trim() === '') {
       throw new Error('O nome da certificação não pode ser vazio');
     }
-    return await this.repo.update(id, data);
+    const result = await this.repo.update(id, data);
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+    return result;
   }
 
   // Exclui uma certificação
   async delete(id: number) {
-    return await this.repo.delete(id);
+    const result = await this.repo.delete(id);
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+    return result;
   }
 }

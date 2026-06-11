@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
-import { listarCadastros, excluirCadastro, editarCadastro, criarCadastro, listarAreas } from "@/services/api";
+import { ref, onMounted, computed, onBeforeUnmount, watch } from "vue";
+import { listarCadastros, excluirCadastro, editarCadastro, criarCadastro, listarAreas, getUsuarioLogado, listarCompetencias } from "@/services/api";
 
 // ====================== ESTADO DA TELA ======================
 const tags = ["Professor", "Gestor", "OPP"];
@@ -52,9 +52,13 @@ function mostrarMensagem(texto, cor = "success") {
 
 // ====================== CARREGAR DADOS ======================
 
-// Lista de áreas disponíveis (para OPP)
+// Lista de áreas disponíveis (para OPP e Professor)
 const areasDisponiveis = ref([]);
 const areasSelecionadas = ref([]);
+
+// Lista de UCs disponíveis (para Professor)
+const competenciasDisponiveis = ref([]);
+const ucsSelecionadas = ref([]);
 
 async function carregarAreas() {
   try {
@@ -64,6 +68,31 @@ async function carregarAreas() {
     console.error("Erro ao carregar áreas:", error);
   }
 }
+
+async function carregarCompetencias() {
+  try {
+    const data = await listarCompetencias();
+    competenciasDisponiveis.value = data;
+  } catch (error) {
+    console.error("Erro ao carregar competências:", error);
+  }
+}
+
+// Filtra as UCs baseado nas áreas selecionadas
+const ucsDisponiveis = computed(() => {
+  if (!areasSelecionadas.value || areasSelecionadas.value.length === 0) return [];
+  return competenciasDisponiveis.value.filter(uc => areasSelecionadas.value.includes(uc.idArea));
+});
+
+// Remove UCs selecionadas que pertencem a áreas que foram desmarcadas
+watch(areasSelecionadas, (novasAreas) => {
+  if (selecionado.value === "Professor") {
+    ucsSelecionadas.value = ucsSelecionadas.value.filter(ucId => {
+      const uc = competenciasDisponiveis.value.find(c => c.idUC === ucId);
+      return uc && novasAreas.includes(uc.idArea);
+    });
+  }
+});
 
 function formatarAreas(user) {
   if (!user.areas || user.areas.length === 0) return "—";
@@ -92,8 +121,12 @@ function abrirAdd() {
     funcao: selecionado.value.toLowerCase()
   };
   areasSelecionadas.value = [];
-  if (selecionado.value === "OPP") {
+  ucsSelecionadas.value = [];
+  if (selecionado.value === "OPP" || selecionado.value === "Professor") {
     carregarAreas();
+    if (selecionado.value === "Professor") {
+      carregarCompetencias();
+    }
   }
   dialogAdd.value = true;
 }
@@ -111,8 +144,16 @@ async function salvarNovo() {
       mostrarMensagem("Erro: O OPP deve ter pelo menos uma área vinculada.", "error");
       return;
   }
+  if (usuarioForm.value.funcao === 'professor' && (!areasSelecionadas.value || areasSelecionadas.value.length === 0)) {
+      mostrarMensagem("Erro: O Professor deve ter pelo menos uma área vinculada.", "error");
+      return;
+  }
   try {
-    const payload = { ...usuarioForm.value, areas: areasSelecionadas.value };
+    const payload = { 
+      ...usuarioForm.value, 
+      areas: areasSelecionadas.value,
+      ucs: usuarioForm.value.funcao === 'professor' ? ucsSelecionadas.value : []
+    };
     await criarCadastro(payload);
     dialogAdd.value = false;
     await carregarUsuarios();
@@ -133,9 +174,18 @@ function abrirEditar(user) {
   // Se o gestor não alterar, a senha atual é mantida intacta no banco.
   usuarioForm.value = { ...user, senha: "Senha001" };
   
-  if (selecionado.value === "OPP") {
+  if (selecionado.value === "OPP" || selecionado.value === "Professor") {
     carregarAreas();
-    if (user.opp && user.opp.oppAreas) {
+    if (selecionado.value === "Professor") {
+      carregarCompetencias();
+      ucsSelecionadas.value = user.ucIds || [];
+    } else {
+      ucsSelecionadas.value = [];
+    }
+    
+    if (user.areaIds && user.areaIds.length > 0) {
+      areasSelecionadas.value = [...user.areaIds];
+    } else if (user.opp && user.opp.oppAreas) {
       areasSelecionadas.value = user.opp.oppAreas.map(oa => oa.idArea);
     } else {
       areasSelecionadas.value = [];
@@ -154,9 +204,17 @@ async function salvarEdicao() {
       mostrarMensagem("Erro: O OPP deve ter pelo menos uma área vinculada.", "error");
       return;
   }
+  if (usuarioForm.value.funcao === 'professor' && (!areasSelecionadas.value || areasSelecionadas.value.length === 0)) {
+      mostrarMensagem("Erro: O Professor deve ter pelo menos uma área vinculada.", "error");
+      return;
+  }
   try {
     const { idUsuario, ...dados } = usuarioForm.value;
-    const payload = { ...dados, areas: areasSelecionadas.value };
+    const payload = { 
+      ...dados, 
+      areas: areasSelecionadas.value,
+      ucs: usuarioForm.value.funcao === 'professor' ? ucsSelecionadas.value : []
+    };
     // Se a senha for a padrão "Senha001" ou estiver vazia, removemos para manter a senha atual do banco
     if (!payload.senha || payload.senha === "Senha001") delete payload.senha;
     
@@ -176,6 +234,11 @@ async function salvarEdicao() {
 }
 
 function abrirDeletar(user) {
+  const usuarioLogado = getUsuarioLogado();
+  if (usuarioLogado && usuarioLogado.idUsuario === user.idUsuario) {
+    mostrarMensagem("Você não pode excluir seu próprio perfil que está em uso no momento.", "error");
+    return;
+  }
   usuarioDeletando.value = user;
   dialogDelete.value = true;
 }
@@ -187,13 +250,31 @@ async function confirmarDelete() {
     await carregarUsuarios();
     mostrarMensagem("Cadastro excluído com sucesso!");
   } catch (error) {
-    mostrarMensagem("Erro ao excluir: Ocorreu um problema ao remover o usuário.", "error");
+    mostrarMensagem("Erro ao excluir: " + (error.message || "Ocorreu um problema ao remover o usuário."), "error");
   }
 }
 
+let wsListener = null;
 onMounted(() => {
   carregarUsuarios();
   carregarAreas();
+
+  wsListener = (event) => {
+    const detail = event.detail;
+    if (detail.entity === 'cadastros') {
+      console.log("🔄 Recarregando cadastros em tempo real...");
+      carregarUsuarios();
+    } else if (detail.entity === 'areas') {
+      carregarAreas();
+    }
+  };
+  window.addEventListener('websocket-data-updated', wsListener);
+});
+
+onBeforeUnmount(() => {
+  if (wsListener) {
+    window.removeEventListener('websocket-data-updated', wsListener);
+  }
 });
 </script>
 
@@ -255,7 +336,8 @@ onMounted(() => {
         <thead>
           <tr>
             <th class="text-left bg-gray-100 dark:bg-[#121212] font-bold">Nome</th>
-            <th v-if="selecionado === 'OPP'" class="text-left bg-gray-100 dark:bg-[#121212] font-bold">Áreas</th>
+            <th v-if="selecionado === 'OPP' || selecionado === 'Professor'" class="text-left bg-gray-100 dark:bg-[#121212] font-bold">Áreas</th>
+            <th v-if="selecionado === 'Professor'" class="text-left bg-gray-100 dark:bg-[#121212] font-bold">Unidades Curriculares</th>
             <th class="text-left bg-gray-100 dark:bg-[#121212] font-bold">Email</th>
             <th class="text-left bg-gray-100 dark:bg-[#121212] font-bold">Senha</th>
             <th class="text-right bg-gray-100 dark:bg-[#121212] font-bold px-10">Ações</th>
@@ -263,13 +345,42 @@ onMounted(() => {
         </thead>
         <tbody>
           <tr v-if="usuariosFiltrados.length === 0">
-            <td :colspan="selecionado === 'OPP' ? 5 : 4" class="text-center text-gray-500 py-8">
+            <td :colspan="selecionado === 'Professor' ? 6 : selecionado === 'OPP' ? 5 : 4" class="text-center text-gray-500 py-8">
               Nenhum usuário encontrado nesta categoria.
             </td>
           </tr>
           <tr v-for="user in usuariosFiltrados" :key="user.idUsuario">
             <td>{{ user.nome }}</td>
-            <td v-if="selecionado === 'OPP'">{{ formatarAreas(user) }}</td>
+            <td v-if="selecionado === 'OPP' || selecionado === 'Professor'">
+              <div class="flex flex-wrap gap-1 max-w-[200px]">
+                <v-chip 
+                  v-for="area in user.areas" 
+                  :key="area" 
+                  size="x-small" 
+                  color="red-darken-2" 
+                  variant="flat" 
+                  class="text-white font-bold"
+                >
+                  {{ area }}
+                </v-chip>
+                <span v-if="!user.areas || user.areas.length === 0">—</span>
+              </div>
+            </td>
+            <td v-if="selecionado === 'Professor'">
+              <div class="flex flex-wrap gap-1 max-w-[300px]">
+                <v-chip 
+                  v-for="uc in user.ucs" 
+                  :key="uc" 
+                  size="x-small" 
+                  color="grey-darken-2" 
+                  variant="outlined" 
+                  class="font-medium"
+                >
+                  {{ uc }}
+                </v-chip>
+                <span v-if="!user.ucs || user.ucs.length === 0">—</span>
+              </div>
+            </td>
             <td>{{ user.email }}</td>
             <td>Senha001</td> <!-- Mostrando fixo como solicitado na imagem -->
             <td class="text-right px-4">
@@ -305,12 +416,24 @@ onMounted(() => {
         <v-text-field v-model="usuarioForm.email" label="Email" variant="outlined" class="mb-4"></v-text-field>
         <v-text-field v-model="usuarioForm.senha" label="Senha" variant="outlined" class="mb-4" readonly></v-text-field>
         <v-select
-          v-if="selecionado === 'OPP'"
+          v-if="selecionado === 'OPP' || selecionado === 'Professor'"
           v-model="areasSelecionadas"
           :items="areasDisponiveis"
           item-title="nome"
           item-value="idArea"
           label="Áreas"
+          variant="outlined"
+          multiple
+          chips
+          class="mb-4"
+        ></v-select>
+        <v-select
+          v-if="selecionado === 'Professor'"
+          v-model="ucsSelecionadas"
+          :items="ucsDisponiveis"
+          item-title="nome"
+          item-value="idUC"
+          label="Unidades Curriculares"
           variant="outlined"
           multiple
           chips
@@ -333,7 +456,7 @@ onMounted(() => {
         <v-text-field v-model="usuarioForm.email" label="Email" variant="outlined" class="mb-4"></v-text-field>
         <v-text-field v-model="usuarioForm.senha" label="Senha" variant="outlined" class="mb-4"></v-text-field>
         <v-select
-          v-if="selecionado === 'OPP'"
+          v-if="selecionado === 'OPP' || selecionado === 'Professor'"
           v-model="areasSelecionadas"
           :items="areasDisponiveis"
           item-title="nome"
@@ -342,12 +465,24 @@ onMounted(() => {
           variant="outlined"
           multiple
           chips
+          class="mb-4"
+        ></v-select>
+        <v-select
+          v-if="selecionado === 'Professor'"
+          v-model="ucsSelecionadas"
+          :items="ucsDisponiveis"
+          item-title="nome"
+          item-value="idUC"
+          label="Unidades Curriculares"
+          variant="outlined"
+          multiple
+          chips
         ></v-select>
       </v-card-text>
       <v-card-actions class="pa-4">
         <v-spacer></v-spacer>
-        <v-btn @click="dialogEdit = false">Cancelar</v-btn>
-        <v-btn color="red" variant="elevated" @click="salvarEdicao">Salvar</v-btn>
+        <v-btn @click="dialogEdit = false" variant="elevated">Cancelar</v-btn>
+        <v-btn color="red" variant="elevated" class="bg-red-600! text-white!" @click="salvarEdicao">Salvar</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -362,8 +497,8 @@ onMounted(() => {
         Tem certeza de que deseja excluir o usuário <b>{{ usuarioDeletando?.nome }}</b>? Esta ação não pode ser desfeita.
       </v-card-text>
       <v-card-actions class="pa-6 pt-0 flex justify-end gap-3">
-        <v-btn color="grey-darken-1" variant="text" class="font-bold px-6 uppercase tracking-wide" @click="dialogDelete = false">Cancelar</v-btn>
-        <v-btn variant="elevated" color="white" class="text-gray-800 font-bold px-8 shadow-sm border uppercase tracking-wide" @click="confirmarDelete">Excluir</v-btn>
+        <v-btn variant="elevated" color="grey-lighten-2" class="font-bold px-6 uppercase tracking-wide text-gray-800" @click="dialogDelete = false">Cancelar</v-btn>
+        <v-btn variant="elevated" color="red" class="bg-red-600 text-white font-bold px-8 shadow-sm uppercase tracking-wide" @click="confirmarDelete">Excluir</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

@@ -8,6 +8,7 @@ import { ProfessorTurma } from './professor-turma.entity.js';
 import { Disponibilidade } from '../disponibilidade/disponibilidade.entity.js';
 import { Professor } from '../professor/professor.entity.js';
 import { TurmaUC } from './turma-uc.entity.js';
+import { WebSocketManager } from '../../shared/websocket.manager.js';
 // Prioridade de ordenação dos períodos (Manhã → Tarde → Noite)
 const PERIODO_ORDEM = {
     'M01': 1, 'M02': 2, 'Manhã': 3, 'MANHÃ': 3,
@@ -85,10 +86,12 @@ export class TurmaService {
             dataTermino: new Date(dados.dataTermino),
             aulasSemana: dados.aulasSemana ?? this.contarDiasUnicos(horariosResolvidos),
             totalAulas: dados.totalAulas ?? horariosResolvidos.length,
+            descricao: dados.descricao?.trim() || null,
             status: true,
         });
         await this.repo.saveHorarios(turma.idTurma, horariosResolvidos);
         const salva = await this.repo.findById(turma.idTurma);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
         return this.mapTurmaParaCard(salva);
     }
     async atualizar(idTurma, usuario, dados) {
@@ -96,11 +99,13 @@ export class TurmaService {
         if (!turma)
             return null;
         await this.verificarPermissao(usuario, turma);
-        // Regra 1: Validar que o OPP pertence à Área selecionada
-        const idOPPFinal = dados.idOPP ?? turma.idOPP;
-        const idAreaFinal = dados.idArea ?? turma.turmaUCs?.[0]?.unidadeCurricular?.idArea;
-        if (idAreaFinal && idOPPFinal) {
-            await this.validarOPPPertenceArea(idOPPFinal, idAreaFinal);
+        // Regra 1: Validar que o OPP pertence à Área selecionada (apenas se estiverem sendo alterados)
+        if (dados.idOPP !== undefined || dados.idArea !== undefined) {
+            const idOPPFinal = dados.idOPP ?? turma.idOPP;
+            const idAreaFinal = dados.idArea ?? (turma.turmaUCs?.[0]?.unidadeCurricular?.idArea || null);
+            if (idAreaFinal && idOPPFinal) {
+                await this.validarOPPPertenceArea(idOPPFinal, idAreaFinal);
+            }
         }
         const updateData = {};
         if (dados.nome)
@@ -114,7 +119,11 @@ export class TurmaService {
         if (dados.idOPP && usuario.funcao === 'gestor')
             updateData.idOPP = dados.idOPP;
         if (dados.descricao !== undefined)
+<<<<<<< HEAD
             updateData.descricao = dados.descricao;
+=======
+            updateData.descricao = dados.descricao?.trim() || null;
+>>>>>>> 2c1e2bd2a9fc3e791b71526861ddabcb78594b4b
         // Se mudou data ou horários, recalculamos aulasSemana e totalAulas
         const dataInicioFinal = dados.dataInicio ? new Date(dados.dataInicio) : turma.dataInicio;
         const dataTerminoFinal = dados.dataTermino ? new Date(dados.dataTermino) : turma.dataTermino;
@@ -136,8 +145,16 @@ export class TurmaService {
         const horariosFinais = horariosForamPassados ? horariosResolvidos : (turma.turmaUCs || []);
         updateData.aulasSemana = this.contarDiasUnicos(horariosFinais);
         updateData.totalAulas = this.calcularTotalAulas(dataInicioFinal, dataTerminoFinal, horariosFinais);
+<<<<<<< HEAD
         await this.repo.update(idTurma, updateData);
         const atualizada = await this.repo.findById(idTurma);
+=======
+        const atualizada = await this.repo.update(idTurma, updateData);
+        if (atualizada) {
+            WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+            WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        }
+>>>>>>> 2c1e2bd2a9fc3e791b71526861ddabcb78594b4b
         return atualizada ? this.mapTurmaParaCard(atualizada) : null;
     }
     async excluir(idTurma, usuario) {
@@ -146,6 +163,8 @@ export class TurmaService {
             return false;
         await this.verificarPermissao(usuario, turma);
         await this.repo.softDelete(idTurma);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
         return true;
     }
     async verificarPermissao(usuario, turma) {
@@ -199,7 +218,9 @@ export class TurmaService {
         return resolvidos;
     }
     contarDiasUnicos(horarios) {
-        return new Set(horarios.map((h) => h.diaSemana)).size;
+        return new Set(horarios
+            ?.map((h) => h?.diaSemana?.toLowerCase())
+            .filter(Boolean) || []).size;
     }
     mapTurmaParaCard(turma) {
         const grade = this.buildGrade(turma);
@@ -217,8 +238,7 @@ export class TurmaService {
                 profsMap.set(pt.idProfessor, {
                     idProfessor: pt.idProfessor,
                     nome: pt.professor?.cadastro?.nome || 'Sem nome',
-                    foto: pt.professor?.cadastro?.fotoPerfil ||
-                        'https://img.freepik.com/fotos-gratis/professor-senior-olhando-camera-contra-chalkboard-com-matematica-exemplo_23-2148200995.jpg?semt=ais_hybrid&w=740&q=80',
+                    foto: pt.professor?.cadastro?.fotoPerfil || '',
                 });
             }
         }
@@ -252,6 +272,7 @@ export class TurmaService {
             oppNome: turma.opp?.cadastro?.nome || '',
             idOPP: turma.idOPP,
             professores,
+            descricao: turma.descricao || '',
         };
     }
     buildGrade(turma) {
@@ -329,7 +350,7 @@ export class TurmaService {
         }
     }
     calcularTotalAulas(dataInicio, dataTermino, horarios) {
-        if (!dataInicio || !dataTermino || !horarios.length)
+        if (!dataInicio || !dataTermino || !horarios?.length)
             return 0;
         if (dataInicio > dataTermino)
             return 0;
@@ -342,7 +363,9 @@ export class TurmaService {
             sabado: 6
         };
         const diasSelecionadosJs = [
-            ...new Set(horarios.map(h => mapaDiasJs[h.diaSemana.toLowerCase()]).filter(d => d !== undefined))
+            ...new Set(horarios
+                .map(h => h?.diaSemana ? mapaDiasJs[h.diaSemana.toLowerCase()] : undefined)
+                .filter(d => d !== undefined))
         ];
         let total = 0;
         const current = new Date(dataInicio);
@@ -479,6 +502,7 @@ export class TurmaService {
                 idProfessor: prof.idProfessor,
                 nome: prof.cadastro?.nome || 'Sem nome',
                 email: prof.cadastro?.email || '',
+                fotoPerfil: prof.cadastro?.fotoPerfil || '',
                 ocupacao,
                 nivelCompetencia: Number(puc.nivelCompetencia),
                 areas: prof.professorAreas?.map(pa => ({
@@ -539,6 +563,10 @@ export class TurmaService {
         });
         await profTurmaRepo.save(novo);
         const atualizada = await this.repo.findById(idTurma);
+        if (atualizada) {
+            WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+            WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        }
         return atualizada ? this.mapTurmaParaCard(atualizada) : null;
     }
     /**
@@ -577,6 +605,10 @@ export class TurmaService {
             await profTurmaRepo.remove(vinculos);
         }
         const atualizada = await this.repo.findById(idTurma);
+        if (atualizada) {
+            WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+            WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+        }
         return atualizada ? this.mapTurmaParaCard(atualizada) : null;
     }
     /**
@@ -600,7 +632,7 @@ export class TurmaService {
         if (['M01', 'M02', 'T01', 'T02', 'N01', 'N02'].includes(p)) {
             return 2;
         }
-        if (p === 'INT' || p === 'INTEGRAL' || p.startsWith('INT_')) {
+        if (p === 'INT' || p === 'INTEGRAL' || p.startsWith('INT_') || p.includes('MANHÃ + TARDE') || p.includes('MANHA + TARDE') || p.includes('MANHÃ + NOITE') || p.includes('MANHA + NOITE') || p.includes('TARDE + NOITE')) {
             return 8;
         }
         if (p === 'MANHÃ' || p === 'MANHA' || p === 'TARDE' || p === 'NOITE') {

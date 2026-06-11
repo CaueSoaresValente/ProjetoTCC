@@ -7,13 +7,17 @@
 // Na tela do usuário, a gente chama de "Competência",
 // mas no banco o nome da tabela é "unidade_curricular".
 // ============================================================
+import { ILike } from 'typeorm';
 import { AppDataSource } from '../../config/data-source.js';
 import { UnidadeCurricular } from './unidade-curricular.entity.js';
+import { ProfessorUC } from './professor-uc.entity.js';
+import { TurmaUC } from '../turma/turma-uc.entity.js';
 export class UnidadeCurricularRepository {
     repo = AppDataSource.getRepository(UnidadeCurricular);
     // Lista todas as competências, trazendo a área de cada uma
     async findAll() {
         return await this.repo.find({
+            where: { status: true },
             relations: ['area'],
             order: { nome: 'ASC' },
         });
@@ -21,8 +25,14 @@ export class UnidadeCurricularRepository {
     // Busca uma competência por ID
     async findById(id) {
         return await this.repo.findOne({
-            where: { idUC: id },
+            where: { idUC: id, status: true },
             relations: ['area'],
+        });
+    }
+    // Busca uma UC pelo nome e área independente de status (ativo ou deletado)
+    async findByNameAndAreaAnyStatus(nome, idArea) {
+        return await this.repo.findOne({
+            where: { nome: ILike(nome.trim()), idArea },
         });
     }
     // Cria uma nova competência
@@ -35,9 +45,16 @@ export class UnidadeCurricularRepository {
         await this.repo.update(id, data);
         return await this.findById(id);
     }
-    // Exclui uma competência
+    // Exclui uma competência (Soft Delete e remoção de vínculos)
     async delete(id) {
-        await this.repo.delete(id);
+        // 1. Soft-delete a UC
+        await this.repo.update(id, { status: false });
+        // 2. Remover competências dos professores
+        const profUCRepo = AppDataSource.getRepository(ProfessorUC);
+        await profUCRepo.delete({ idUC: id });
+        // 3. Remover slots das turmas (cascata removerá alocações automaticamente)
+        const turmaUCRepo = AppDataSource.getRepository(TurmaUC);
+        await turmaUCRepo.delete({ idUC: id });
     }
 }
 //# sourceMappingURL=unidade-curricular.repository.js.map

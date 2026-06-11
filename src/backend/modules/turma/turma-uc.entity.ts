@@ -17,12 +17,12 @@ export class TurmaUC {
   @Column({ name: 'dia_semana', type: 'varchar', length: 20 })
   diaSemana: string;
 
-  @Column({ type: 'varchar', length: 10 })
+  @Column({ type: 'varchar', length: 30 })
   periodo: string; // 'M01', 'M02', 'T01', 'T02', 'N01', 'N02', 'INT'
 
   @ManyToOne(() => Turma, (turma) => turma.turmaUCs, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_turma' })
-  turma: any;
+  turma: Turma;
 
   @ManyToOne(() => UnidadeCurricular, (uc) => uc.turmaUCs, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_uc' })

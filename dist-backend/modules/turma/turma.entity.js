@@ -19,6 +19,7 @@ let Turma = class Turma {
     dataTermino;
     aulasSemana;
     totalAulas;
+    descricao;
     status;
     descricao;
     criador;
@@ -33,7 +34,7 @@ __decorate([
     Column({ name: 'id_criador', type: 'int' })
 ], Turma.prototype, "idCriador", void 0);
 __decorate([
-    Column({ name: 'id_opp', type: 'int' })
+    Column({ name: 'id_opp', type: 'int', nullable: true })
 ], Turma.prototype, "idOPP", void 0);
 __decorate([
     Column({ type: 'varchar', length: 100 })
@@ -54,6 +55,9 @@ __decorate([
     Column({ name: 'total_aulas', type: 'int', nullable: true })
 ], Turma.prototype, "totalAulas", void 0);
 __decorate([
+    Column({ type: 'text', nullable: true })
+], Turma.prototype, "descricao", void 0);
+__decorate([
     Column({ type: 'boolean', default: true })
 ], Turma.prototype, "status", void 0);
 __decorate([
@@ -64,7 +68,7 @@ __decorate([
     JoinColumn({ name: 'id_criador' })
 ], Turma.prototype, "criador", void 0);
 __decorate([
-    ManyToOne(() => OPP, (opp) => opp.turmas, { nullable: false }),
+    ManyToOne(() => OPP, (opp) => opp.turmas, { nullable: true }),
     JoinColumn({ name: 'id_opp' })
 ], Turma.prototype, "opp", void 0);
 __decorate([

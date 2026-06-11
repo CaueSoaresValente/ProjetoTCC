@@ -10,6 +10,7 @@ import { ProfessorTurma } from './professor-turma.entity.js';
 import { Disponibilidade } from '../disponibilidade/disponibilidade.entity.js';
 import { Professor } from '../professor/professor.entity.js';
 import { TurmaUC } from './turma-uc.entity.js';
+import { WebSocketManager } from '../../shared/websocket.manager.js';
 
 // Prioridade de ordenação dos períodos (Manhã → Tarde → Noite)
 const PERIODO_ORDEM: Record<string, number> = {
@@ -62,6 +63,7 @@ interface CriarTurmaInput {
   idArea?: number;
   aulasSemana?: number;
   totalAulas?: number;
+  descricao?: string;
   horarios: HorarioInput[];
   descricao?: string;
 }
@@ -73,11 +75,16 @@ export class TurmaService {
     let turmas: Turma[];
 
     if (usuario.funcao === 'opp') {
-      const idOPP = await this.resolverIdOPP(usuario.idUsuario);
-      if (!idOPP) {
+      const oppRepo = AppDataSource.getRepository(OPP);
+      const opp = await oppRepo.findOne({
+        where: { idCadastro: usuario.idUsuario, status: true },
+        relations: ['oppAreas'],
+      });
+      if (!opp) {
         throw new Error('OPP não encontrado para este cadastro');
       }
-      turmas = await this.repo.findByOPP(idOPP);
+      const idsAreas = opp.oppAreas?.map(oa => oa.idArea) || [];
+      turmas = await this.repo.findByOPPAreas(opp.idOPP, idsAreas);
     } else {
       turmas = await this.repo.findAll();
     }
@@ -128,12 +135,14 @@ export class TurmaService {
       dataTermino: new Date(dados.dataTermino),
       aulasSemana: dados.aulasSemana ?? this.contarDiasUnicos(horariosResolvidos),
       totalAulas: dados.totalAulas ?? horariosResolvidos.length,
+      descricao: dados.descricao?.trim() || null,
       status: true,
     });
 
     await this.repo.saveHorarios(turma.idTurma, horariosResolvidos);
 
     const salva = await this.repo.findById(turma.idTurma);
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
     return this.mapTurmaParaCard(salva!);
   }
 
@@ -143,11 +152,13 @@ export class TurmaService {
 
     await this.verificarPermissao(usuario, turma);
 
-    // Regra 1: Validar que o OPP pertence à Área selecionada
-    const idOPPFinal = dados.idOPP ?? turma.idOPP;
-    const idAreaFinal = dados.idArea ?? turma.turmaUCs?.[0]?.unidadeCurricular?.idArea;
-    if (idAreaFinal && idOPPFinal) {
-      await this.validarOPPPertenceArea(idOPPFinal, idAreaFinal);
+    // Regra 1: Validar que o OPP pertence à Área selecionada (apenas se estiverem sendo alterados)
+    if (dados.idOPP !== undefined || dados.idArea !== undefined) {
+      const idOPPFinal = dados.idOPP ?? turma.idOPP;
+      const idAreaFinal = dados.idArea ?? (turma.turmaUCs?.[0]?.unidadeCurricular?.idArea || null);
+      if (idAreaFinal && idOPPFinal) {
+        await this.validarOPPPertenceArea(idOPPFinal, idAreaFinal);
+      }
     }
 
     const updateData: Partial<Turma> = {};
@@ -156,7 +167,11 @@ export class TurmaService {
     if (dados.dataInicio) updateData.dataInicio = new Date(dados.dataInicio);
     if (dados.dataTermino) updateData.dataTermino = new Date(dados.dataTermino);
     if (dados.idOPP && usuario.funcao === 'gestor') updateData.idOPP = dados.idOPP;
+<<<<<<< HEAD
     if (dados.descricao !== undefined) updateData.descricao = dados.descricao;
+=======
+    if (dados.descricao !== undefined) updateData.descricao = dados.descricao?.trim() || null;
+>>>>>>> 2c1e2bd2a9fc3e791b71526861ddabcb78594b4b
 
     // Se mudou data ou horários, recalculamos aulasSemana e totalAulas
     const dataInicioFinal = dados.dataInicio ? new Date(dados.dataInicio) : turma.dataInicio;
@@ -187,9 +202,17 @@ export class TurmaService {
     updateData.aulasSemana = this.contarDiasUnicos(horariosFinais);
     updateData.totalAulas = this.calcularTotalAulas(dataInicioFinal, dataTerminoFinal, horariosFinais);
 
+<<<<<<< HEAD
     await this.repo.update(idTurma, updateData);
 
     const atualizada = await this.repo.findById(idTurma);
+=======
+    const atualizada = await this.repo.update(idTurma, updateData);
+    if (atualizada) {
+      WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+      WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+    }
+>>>>>>> 2c1e2bd2a9fc3e791b71526861ddabcb78594b4b
     return atualizada ? this.mapTurmaParaCard(atualizada) : null;
   }
 
@@ -199,6 +222,8 @@ export class TurmaService {
 
     await this.verificarPermissao(usuario, turma);
     await this.repo.softDelete(idTurma);
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+    WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
     return true;
   }
 
@@ -265,7 +290,11 @@ export class TurmaService {
   private contarDiasUnicos(
     horarios: { diaSemana: string }[],
   ): number {
-    return new Set(horarios.map((h) => h.diaSemana)).size;
+    return new Set(
+      horarios
+        ?.map((h) => h?.diaSemana?.toLowerCase())
+        .filter(Boolean) || []
+    ).size;
   }
 
   private mapTurmaParaCard(turma: Turma) {
@@ -286,9 +315,7 @@ export class TurmaService {
         profsMap.set(pt.idProfessor, {
           idProfessor: pt.idProfessor,
           nome: pt.professor?.cadastro?.nome || 'Sem nome',
-          foto:
-            pt.professor?.cadastro?.fotoPerfil ||
-            'https://img.freepik.com/fotos-gratis/professor-senior-olhando-camera-contra-chalkboard-com-matematica-exemplo_23-2148200995.jpg?semt=ais_hybrid&w=740&q=80',
+          foto: pt.professor?.cadastro?.fotoPerfil || '',
         });
       }
     }
@@ -326,6 +353,7 @@ export class TurmaService {
       oppNome: turma.opp?.cadastro?.nome || '',
       idOPP: turma.idOPP,
       professores,
+      descricao: turma.descricao || '',
     };
   }
 
@@ -421,7 +449,7 @@ export class TurmaService {
   }
 
   private calcularTotalAulas(dataInicio: Date, dataTermino: Date, horarios: { diaSemana: string }[]): number {
-    if (!dataInicio || !dataTermino || !horarios.length) return 0;
+    if (!dataInicio || !dataTermino || !horarios?.length) return 0;
     if (dataInicio > dataTermino) return 0;
 
     const mapaDiasJs: Record<string, number> = {
@@ -435,7 +463,9 @@ export class TurmaService {
 
     const diasSelecionadosJs = [
       ...new Set(
-        horarios.map(h => mapaDiasJs[h.diaSemana.toLowerCase()]).filter(d => d !== undefined)
+        horarios
+          .map(h => h?.diaSemana ? mapaDiasJs[h.diaSemana.toLowerCase()] : undefined)
+          .filter(d => d !== undefined)
       )
     ];
 
@@ -521,6 +551,7 @@ export class TurmaService {
       idProfessor: number;
       nome: string;
       email: string;
+      fotoPerfil: string;
       ocupacao: number;
       nivelCompetencia: number;
       areas: { idArea: number; nome: string }[];
@@ -615,6 +646,7 @@ export class TurmaService {
         idProfessor: prof.idProfessor,
         nome: prof.cadastro?.nome || 'Sem nome',
         email: prof.cadastro?.email || '',
+        fotoPerfil: prof.cadastro?.fotoPerfil || '',
         ocupacao,
         nivelCompetencia: Number(puc.nivelCompetencia),
         areas: prof.professorAreas?.map(pa => ({
@@ -715,6 +747,10 @@ export class TurmaService {
     await profTurmaRepo.save(novo);
 
     const atualizada = await this.repo.findById(idTurma);
+    if (atualizada) {
+      WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+      WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+    }
     return atualizada ? this.mapTurmaParaCard(atualizada) : null;
   }
 
@@ -763,6 +799,10 @@ export class TurmaService {
     }
 
     const atualizada = await this.repo.findById(idTurma);
+    if (atualizada) {
+      WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'turmas' });
+      WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'professores' });
+    }
     return atualizada ? this.mapTurmaParaCard(atualizada) : null;
   }
 
@@ -784,7 +824,7 @@ export class TurmaService {
     if (['M01', 'M02', 'T01', 'T02', 'N01', 'N02'].includes(p)) {
       return 2;
     }
-    if (p === 'INT' || p === 'INTEGRAL' || p.startsWith('INT_')) {
+    if (p === 'INT' || p === 'INTEGRAL' || p.startsWith('INT_') || p.includes('MANHÃ + TARDE') || p.includes('MANHA + TARDE') || p.includes('MANHÃ + NOITE') || p.includes('MANHA + NOITE') || p.includes('TARDE + NOITE')) {
       return 8;
     }
     if (p === 'MANHÃ' || p === 'MANHA' || p === 'TARDE' || p === 'NOITE') {

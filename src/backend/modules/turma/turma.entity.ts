@@ -12,8 +12,8 @@ export class Turma {
   @Column({ name: 'id_criador', type: 'int' })
   idCriador: number;
 
-  @Column({ name: 'id_opp', type: 'int' })
-  idOPP: number;
+  @Column({ name: 'id_opp', type: 'int', nullable: true })
+  idOPP: number | null;
 
   @Column({ type: 'varchar', length: 100 })
   nome: string;
@@ -33,6 +33,9 @@ export class Turma {
   @Column({ name: 'total_aulas', type: 'int', nullable: true })
   totalAulas: number;
 
+  @Column({ type: 'text', nullable: true })
+  descricao: string | null;
+
   @Column({ type: 'boolean', default: true })
   status: boolean;
 
@@ -43,9 +46,9 @@ export class Turma {
   @JoinColumn({ name: 'id_criador' })
   criador: Cadastro;
 
-  @ManyToOne(() => OPP, (opp) => opp.turmas, { nullable: false })
+  @ManyToOne(() => OPP, (opp) => opp.turmas, { nullable: true })
   @JoinColumn({ name: 'id_opp' })
-  opp: OPP;
+  opp: OPP | null;
 
   @OneToMany(() => TurmaUC, (tuc) => tuc.turma)
   turmaUCs: TurmaUC[];

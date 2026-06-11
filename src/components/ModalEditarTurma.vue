@@ -65,6 +65,21 @@ const filteredCompetencias = computed(() => {
   return list;
 });
 
+// Lista de áreas derivada das UCs carregadas — garante que o OPP veja
+// UCs de TODAS as áreas do sistema (não apenas as suas) ao montar a turma
+const areasParaFiltroUC = computed(() => {
+  const mapaAreas = new Map();
+  for (const uc of todasUnidadesCurriculares.value) {
+    if (uc.idArea && !mapaAreas.has(uc.idArea)) {
+      mapaAreas.set(uc.idArea, {
+        title: uc.areaNome || `Área ${uc.idArea}`,
+        value: uc.idArea,
+      });
+    }
+  }
+  return [...mapaAreas.values()].sort((a, b) => a.title.localeCompare(b.title));
+});
+
 async function carregarAreas() {
   try {
     const data = await listarAreas();
@@ -97,9 +112,29 @@ function filtrarOpps() {
     return opp.oppAreas && opp.oppAreas.some(oa => oa.idArea === areaId);
   });
   oppsList.value = oppsFiltrados.map(opp => ({
-    label: opp.cadastro.nome,
+    label: opp.cadastro?.nome || "Sem nome",
     value: opp.idOPP
   }));
+
+  // Blindagem Premium: Garante que o OPP atual da turma sempre tenha seu nome exibido (e nunca o ID numérico)
+  // Somente se a área atual do formulário for a mesma área original da turma
+  if (props.turma?.idOPP && form.value.idArea === props.turma?.idArea) {
+    const jaEstaNaLista = oppsList.value.some(o => o.value === props.turma.idOPP);
+    if (!jaEstaNaLista) {
+      const oppOriginal = todosOpps.value.find(o => o.idOPP === props.turma.idOPP);
+      if (oppOriginal) {
+        oppsList.value.push({
+          label: oppOriginal.cadastro?.nome || "Sem nome",
+          value: oppOriginal.idOPP
+        });
+      } else if (props.turma.oppNome) {
+        oppsList.value.push({
+          label: props.turma.oppNome,
+          value: props.turma.idOPP
+        });
+      }
+    }
+  }
 }
 
 async function carregarUCs() {
@@ -176,6 +211,7 @@ async function carregarTodasUCs() {
         idUC: uc.idUC,
         nome: uc.nome,
         idArea: uc.idArea,
+        areaNome: uc.area?.nome || '',
         carga: carga || undefined
       };
     });
@@ -253,7 +289,7 @@ watch(() => props.turma, (newTurma) => {
       label: newTurma.label,
       idArea: newTurma.idArea || null,
       modalidade: newTurma.modalidade,
-      idOPP: null,
+      idOPP: newTurma.idOPP || null,
       dataInicio: newTurma.dataInicioISO || newTurma.dataInicio || "",
       dataFim: newTurma.dataTerminoISO || newTurma.dataFim || "",
       aulasSemana: newTurma.aulasSemana || 4,
@@ -266,21 +302,11 @@ watch(() => props.turma, (newTurma) => {
     if (newTurma.grade) {
       newTurma.grade.forEach(slot => {
         const p = slot.periodo;
-        const pLower = p.toLowerCase();
         const diaMap = { 'Seg': 'segunda', 'Ter': 'terca', 'Qua': 'quarta', 'Qui': 'quinta', 'Sex': 'sexta', 'Sáb': 'sabado' };
 
         Object.keys(slot.aulas || {}).forEach(dia => {
           const diaKey = diaMap[dia];
           if (diaKey) {
-            // Mapeia os sub-tipos de integral corretamente
-            if (p === 'INT_MT' || p === 'INT_MN' || p === 'INT_TN') {
-              selectedPeriodo.value[diaKey] = p;
-            } else if (pLower.includes('integral') || p === 'INT') {
-              selectedPeriodo.value[diaKey] = 'INT_MT'; // Integral padrão = Manhã+Tarde
-            } else if (pLower.startsWith('m')) selectedPeriodo.value[diaKey] = 'manha';
-            else if (pLower.startsWith('t')) selectedPeriodo.value[diaKey] = 'tarde';
-            else if (pLower.startsWith('n')) selectedPeriodo.value[diaKey] = 'noite';
-
             if (!ucsSalvas.value[diaKey].some(item => item.idUC === slot.aulas[dia].idUC && item.periodo === slot.periodo)) {
               ucsSalvas.value[diaKey].push({ 
                 uc: slot.aulas[dia].disciplina, 
@@ -291,6 +317,59 @@ watch(() => props.turma, (newTurma) => {
             }
           }
         });
+      });
+
+      // Deduzir o selectedPeriodo com base nas UCs inseridas para cada dia
+      Object.keys(ucsSalvas.value).forEach(diaKey => {
+        const ucs = ucsSalvas.value[diaKey];
+        if (ucs.length === 0) {
+          selectedPeriodo.value[diaKey] = null;
+          return;
+        }
+
+        let hasManha = false;
+        let hasTarde = false;
+        let hasNoite = false;
+
+        ucs.forEach(item => {
+          const p = item.periodo.trim();
+          const pUpper = p.toUpperCase();
+          const pLower = p.toLowerCase();
+
+          if (pUpper === 'INT_MT' || pLower.includes('manhã + tarde') || pLower.includes('manha + tarde')) {
+            hasManha = true;
+            hasTarde = true;
+          } else if (pUpper === 'INT_MN' || pLower.includes('manhã + noite') || pLower.includes('manha + noite')) {
+            hasManha = true;
+            hasNoite = true;
+          } else if (pUpper === 'INT_TN' || pLower.includes('tarde + noite')) {
+            hasTarde = true;
+            hasNoite = true;
+          } else if (pLower.includes('integral') || pUpper === 'INT' || pUpper === 'INTEGRAL') {
+            hasManha = true;
+            hasTarde = true;
+          } else if (pLower.startsWith('m') || pUpper === 'MANHÃ' || pUpper === 'MANHA') {
+            hasManha = true;
+          } else if (pLower.startsWith('t') || pUpper === 'TARDE') {
+            hasTarde = true;
+          } else if (pLower.startsWith('n') || pUpper === 'NOITE') {
+            hasNoite = true;
+          }
+        });
+
+        if (hasManha && hasTarde) {
+          selectedPeriodo.value[diaKey] = 'INT_MT';
+        } else if (hasManha && hasNoite) {
+          selectedPeriodo.value[diaKey] = 'INT_MN';
+        } else if (hasTarde && hasNoite) {
+          selectedPeriodo.value[diaKey] = 'INT_TN';
+        } else if (hasManha) {
+          selectedPeriodo.value[diaKey] = 'manha';
+        } else if (hasTarde) {
+          selectedPeriodo.value[diaKey] = 'tarde';
+        } else if (hasNoite) {
+          selectedPeriodo.value[diaKey] = 'noite';
+        }
       });
     }
   }
@@ -457,7 +536,7 @@ const listaDeProfessores = computed(() => {
   const profs = new Set();
   Object.values(ucsSalvas.value).forEach(ucsNoDia => {
     ucsNoDia.forEach(item => {
-      if (item.professor) profs.add(item.professor);
+      if (item.professor && item.professor !== 'A definir') profs.add(item.professor);
     });
   });
   return Array.from(profs);
@@ -783,8 +862,12 @@ function salvar() {
               <p class="mb-2 font-bold text-xs text-gray-500 uppercase">Professores Adicionados</p>
               <div class="flex flex-wrap gap-2">
                 <v-chip v-for="prof in listaDeProfessores" :key="prof" size="small" color="red" variant="tonal"
-                  class="font-bold" closable @click:close="removerProfessor(prof)">
-                  <v-avatar start icon="mdi-account" color="red-lighten-4"></v-avatar>
+                   class="font-bold" closable @click:close="removerProfessor(prof)">
+                  <v-avatar start class="shadow-sm border border-gray-200">
+                    <div class="w-full h-full flex items-center justify-center font-black text-white bg-gradient-to-br from-green-600 to-green-500 text-[10px] uppercase">
+                      {{ prof ? prof.charAt(0).toUpperCase() : "?" }}
+                    </div>
+                  </v-avatar>
                   {{ prof }}
                 </v-chip>
                 <v-chip v-if="listaDeProfessores.length === 0" size="small" variant="text">Nenhum professor
@@ -992,7 +1075,7 @@ function salvar() {
         <div class="px-6 space-y-3 mb-4">
           <div>
             <p class="mb-1 font-bold text-[12px] text-gray-500 uppercase tracking-wide">Filtrar por Área</p>
-            <v-select v-model="areaFiltroModal" :items="areasDisponiveis" item-title="title" item-value="value"
+            <v-select v-model="areaFiltroModal" :items="areasParaFiltroUC" item-title="title" item-value="value"
               placeholder="Selecione a área..." variant="filled" density="compact" hide-details clearable></v-select>
           </div>
 
@@ -1022,10 +1105,10 @@ function salvar() {
         <!-- Botões de Ação - Padronizados -->
         <v-card-actions class="px-6 py-6 pt-2">
           <v-spacer></v-spacer>
-          <v-btn variant="outlined" color="red" class="px-6 text-none font-bold" @click="modalUC = false">
+          <v-btn variant="elevated" color="grey-lighten-2" class="font-bold px-6 text-none text-gray-800" @click="modalUC = false">
             Cancelar
           </v-btn>
-          <v-btn color="red" class="bg-red-600 text-white px-8 text-none font-bold shadow-md" @click="salvarUCs">
+          <v-btn variant="elevated" color="red" class="bg-red-600 text-white px-8 text-none font-bold" @click="salvarUCs">
             Salvar Seleção
           </v-btn>
         </v-card-actions>

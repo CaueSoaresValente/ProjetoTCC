@@ -8,6 +8,9 @@ export declare class CadastroService {
     findById(id: number): Promise<Cadastro | null>;
     listAll(): Promise<{
         areas: string[];
+        areaIds: number[];
+        ucs: string[];
+        ucIds: number[];
         idUsuario: number;
         email: string;
         senha: string;
@@ -25,5 +28,6 @@ export declare class CadastroService {
     private garantirProfessor;
     private criarOppComAreas;
     private atualizarAreasOpp;
+    private atualizarAreasProfessor;
 }
 //# sourceMappingURL=cadastro.service.d.ts.map

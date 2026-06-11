@@ -45,6 +45,15 @@ async function request(url: string, options: RequestInit = {}) {
     headers,
   });
 
+  // Se o token expirou ou o perfil foi excluído (401), desloga e redireciona imediatamente
+  if (response.status === 401 && !url.includes('/api/auth/login')) {
+    logout();
+    window.dispatchEvent(new Event('usuario-atualizado'));
+    if (!window.location.pathname.includes('/login') && window.location.pathname !== '/') {
+      window.location.href = '/login';
+    }
+  }
+
   // Se deu erro, lança uma exceção
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -85,12 +94,42 @@ export async function login(email: string, senha: string) {
 }
 
 /**
+ * Faz login usando o credential do Google Identity Services.
+ * O backend verifica o token, busca o papel na tabela cadastro, e retorna o JWT interno.
+ */
+export async function loginWithGoogle(credential: string) {
+  const data = await request('/api/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential }),
+  });
+
+  // Salva o token e o usuário no navegador (mesmo fluxo do login normal)
+  localStorage.setItem(TOKEN_KEY, data.token);
+  localStorage.setItem(USER_KEY, JSON.stringify(data.usuario));
+
+  // Notifica os componentes (ex: Menu.vue) que o usuário mudou
+  window.dispatchEvent(new Event('usuario-atualizado'));
+
+  return data;
+}
+
+/**
  * Solicita recuperação de senha por e-mail.
  */
 export async function recuperarSenha(email: string) {
   return request('/api/auth/recuperar', {
     method: 'POST',
     body: JSON.stringify({ email }),
+  });
+}
+
+/**
+ * Redefine a senha de um usuário após validação de e-mail.
+ */
+export async function resetarSenha(email: string, novaSenha: string) {
+  return request('/api/auth/resetar-senha', {
+    method: 'POST',
+    body: JSON.stringify({ email, novaSenha }),
   });
 }
 
@@ -115,6 +154,14 @@ export function getUsuarioLogado() {
  */
 export function estaLogado(): boolean {
   return !!localStorage.getItem(TOKEN_KEY);
+}
+
+/**
+ * Verifica se a sessão do usuário ainda é válida (perfil ativo no banco).
+ * Retorna { ativo: true } ou { ativo: false, motivo: 'perfil_excluido' }.
+ */
+export async function verificarSessao() {
+  return request('/api/auth/session-check');
 }
 
 // ============================================================
@@ -609,6 +656,18 @@ export async function editarTurma(id: number, dados: Record<string, unknown>) {
 export async function excluirTurma(id: number) {
   return request(`/api/turmas/${id}`, {
     method: 'DELETE',
+  });
+}
+
+/**
+ * Atualiza apenas a descrição de uma turma.
+ * @param id - ID da turma
+ * @param descricao - Nova descrição (texto livre)
+ */
+export async function atualizarDescricaoTurma(id: number, descricao: string) {
+  return request(`/api/turmas/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ descricao }),
   });
 }
 

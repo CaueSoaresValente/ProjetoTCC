@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed, onMounted } from "vue";
+import { ref, watch, computed, onMounted, onBeforeUnmount } from "vue";
 import {
   getUsuarioLogado,
   buscarProfessorPorCadastro,
@@ -356,6 +356,8 @@ watch(dialogAddCertificacao, (val) => {
 // =============================================
 // INICIALIZAÇÃO — Carrega tudo ao montar a página
 // =============================================
+let wsListener;
+
 onMounted(async () => {
   try {
     const usuario = getUsuarioLogado();
@@ -387,6 +389,32 @@ onMounted(async () => {
     }
   } catch (e) { 
     console.error('Erro ao inicializar:', e);
+  }
+
+  wsListener = (event) => {
+    const detail = event.detail;
+    if (detail.entity === 'areas') {
+      carregarAreasDisponiveis();
+      carregarAreas();
+    } else if (detail.entity === 'competencias') {
+      carregarUnidades();
+      if (areaSelecionadaFiltro.value) {
+        listarUCsPorArea(areaSelecionadaFiltro.value).then(res => {
+          unidadesFiltradas.value = res;
+        }).catch(console.error);
+      }
+    } else if (detail.entity === 'professores') {
+      carregarAreas();
+      carregarUnidades();
+      carregarCertificacoes();
+    }
+  };
+  window.addEventListener('websocket-data-updated', wsListener);
+});
+
+onBeforeUnmount(() => {
+  if (wsListener) {
+    window.removeEventListener('websocket-data-updated', wsListener);
   }
 });
 </script>
@@ -685,10 +713,9 @@ onMounted(async () => {
         Tem certeza de que deseja excluir a área
         <strong>{{ areaSelecionada?.area?.nome }}</strong>? Esta ação não pode ser desfeita.
       </v-card-text>
-      <v-card-actions class="pa-4">
-        <v-spacer></v-spacer>
-        <v-btn color="grey" variant="text" @click="dialogDeleteArea = false">Cancelar</v-btn>
-        <v-btn color="red" variant="elevated" @click="confirmarDeleteArea">Excluir</v-btn>
+      <v-card-actions class="pa-4 flex justify-end gap-3">
+        <v-btn variant="elevated" color="grey-lighten-2" class="font-bold text-gray-800" @click="dialogDeleteArea = false">Cancelar</v-btn>
+        <v-btn variant="elevated" color="red" class="bg-red-600 text-white font-bold" @click="confirmarDeleteArea">Excluir</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -830,10 +857,9 @@ onMounted(async () => {
         Tem certeza de que deseja excluir
         <strong>{{ unidadeSelecionada?.unidadeCurricular?.nome }}</strong>? Esta ação não pode ser desfeita.
       </v-card-text>
-      <v-card-actions class="pa-4">
-        <v-spacer></v-spacer>
-        <v-btn color="grey" variant="text" @click="dialogDeleteUnidade = false">Cancelar</v-btn>
-        <v-btn color="red" variant="elevated" @click="confirmarDeleteUnidade">Excluir</v-btn>
+      <v-card-actions class="pa-4 flex justify-end gap-3">
+        <v-btn variant="elevated" color="grey-lighten-2" class="font-bold text-gray-800" @click="dialogDeleteUnidade = false">Cancelar</v-btn>
+        <v-btn variant="elevated" color="red" class="bg-red-600 text-white font-bold" @click="confirmarDeleteUnidade">Excluir</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -968,10 +994,9 @@ onMounted(async () => {
         Deseja excluir a certificação
         <strong>{{ certificacaoSelecionada?.nome }}</strong>?
       </v-card-text>
-      <v-card-actions class="pa-4">
-        <v-spacer></v-spacer>
-        <v-btn color="grey" variant="text" @click="dialogDeleteCertificacao = false">Cancelar</v-btn>
-        <v-btn color="red" variant="elevated" @click="confirmarDeleteCertificacao">Excluir</v-btn>
+      <v-card-actions class="pa-4 flex justify-end gap-3">
+        <v-btn variant="elevated" color="grey-lighten-2" class="font-bold text-gray-800" @click="dialogDeleteCertificacao = false">Cancelar</v-btn>
+        <v-btn variant="elevated" color="red" class="bg-red-600 text-white font-bold" @click="confirmarDeleteCertificacao">Excluir</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

@@ -5,6 +5,7 @@
 // Mesma lógica do AreaService — valida e repassa para o Repository.
 // ============================================================
 import { UnidadeCurricularRepository } from './unidade-curricular.repository.js';
+import { WebSocketManager } from '../../shared/websocket.manager.js';
 export class UnidadeCurricularService {
     repo = new UnidadeCurricularRepository();
     // Lista todas as competências
@@ -15,7 +16,7 @@ export class UnidadeCurricularService {
     async findById(id) {
         return await this.repo.findById(id);
     }
-    // Cria uma nova competência (com validações)
+    // Cria uma nova competência (com validações e reativação)
     async create(data) {
         // O nome é obrigatório
         if (!data.nome || data.nome.trim() === '') {
@@ -25,18 +26,59 @@ export class UnidadeCurricularService {
         if (!data.idArea) {
             throw new Error('A área é obrigatória');
         }
-        return await this.repo.create(data);
+        const nomeFormatado = data.nome.trim();
+        // Verificação de UC ativa/inativa na mesma área
+        const existente = await this.repo.findByNameAndAreaAnyStatus(nomeFormatado, data.idArea);
+        if (existente) {
+            if (existente.status) {
+                throw new Error('Já existe uma UC cadastrada com este nome nesta área');
+            }
+            else {
+                // Se a UC existe mas está inativa (soft-deletada), nós a reativamos!
+                existente.status = true;
+                if (data.descricao !== undefined) {
+                    existente.descricao = data.descricao;
+                }
+                const result = await this.repo.update(existente.idUC, existente);
+                WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'competencias' });
+                return result;
+            }
+        }
+        const result = await this.repo.create({ ...data, nome: nomeFormatado });
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'competencias' });
+        return result;
     }
     // Atualiza uma competência existente
     async update(id, data) {
         if (data.nome !== undefined && data.nome.trim() === '') {
             throw new Error('O nome da UC não pode ser vazio');
         }
-        return await this.repo.update(id, data);
+        if (data.nome !== undefined) {
+            const nomeFormatado = data.nome.trim();
+            const ucAtual = await this.repo.findById(id);
+            const idArea = data.idArea || ucAtual?.idArea;
+            if (idArea) {
+                const existente = await this.repo.findByNameAndAreaAnyStatus(nomeFormatado, idArea);
+                if (existente && existente.idUC !== id) {
+                    if (existente.status) {
+                        throw new Error('Já existe uma UC cadastrada com este nome nesta área');
+                    }
+                    else {
+                        throw new Error('Já existe uma UC inativa com este nome nesta área. Por favor, escolha outro nome.');
+                    }
+                }
+            }
+            data.nome = nomeFormatado;
+        }
+        const result = await this.repo.update(id, data);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'competencias' });
+        return result;
     }
     // Exclui uma competência
     async delete(id) {
-        return await this.repo.delete(id);
+        const result = await this.repo.delete(id);
+        WebSocketManager.broadcast({ type: 'DATA_UPDATED', entity: 'competencias' });
+        return result;
     }
 }
 //# sourceMappingURL=unidade-curricular.service.js.map

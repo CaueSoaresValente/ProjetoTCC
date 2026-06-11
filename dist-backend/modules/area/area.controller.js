@@ -18,7 +18,7 @@ export class AreaController {
     // GET /api/areas — Lista todas as áreas
     async list(req, res) {
         try {
-            const areas = await this.service.findAll();
+            const areas = await this.service.findAll(req.usuario);
             return res.json(areas);
         }
         catch (error) {
@@ -57,6 +57,10 @@ export class AreaController {
             return res.json({ message: 'Área excluída com sucesso' });
         }
         catch (error) {
+            // Retorna 409 Conflict quando a exclusão é bloqueada por regras de negócio
+            if (error.message?.includes('Não é possível desativar')) {
+                return res.status(409).json({ message: error.message });
+            }
             return res.status(500).json({ message: error.message });
         }
     }
