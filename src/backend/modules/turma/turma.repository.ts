@@ -6,6 +6,7 @@ const RELATIONS = [
   'criador',
   'opp',
   'opp.cadastro',
+  'area',
   'turmaUCs',
   'turmaUCs.unidadeCurricular',
   'turmaUCs.unidadeCurricular.area',
@@ -48,6 +49,7 @@ export class TurmaRepository {
       .leftJoinAndSelect('turma.criador', 'criador')
       .leftJoinAndSelect('turma.opp', 'opp')
       .leftJoinAndSelect('opp.cadastro', 'oppCadastro')
+      .leftJoinAndSelect('turma.area', 'turmaArea')
       .leftJoinAndSelect('turma.turmaUCs', 'turmaUCs')
       .leftJoinAndSelect('turmaUCs.unidadeCurricular', 'unidadeCurricular')
       .leftJoinAndSelect('unidadeCurricular.area', 'area')
@@ -66,6 +68,7 @@ export class TurmaRepository {
       .leftJoinAndSelect('turma.criador', 'criador')
       .leftJoinAndSelect('turma.opp', 'opp')
       .leftJoinAndSelect('opp.cadastro', 'oppCadastro')
+      .leftJoinAndSelect('turma.area', 'turmaArea')
       .leftJoinAndSelect('turma.turmaUCs', 'turmaUCs')
       .leftJoinAndSelect('turmaUCs.unidadeCurricular', 'unidadeCurricular')
       .leftJoinAndSelect('unidadeCurricular.area', 'area')

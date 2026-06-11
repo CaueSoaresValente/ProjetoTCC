@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, OneToOne,
 import { Cadastro } from '../cadastro/cadastro.entity.js';
 import { OPP } from '../opp/opp.entity.js';
 import { ProfessorTurma } from './professor-turma.entity.js';
+import { Area } from '../area/area.entity.js';
 import { TurmaUC } from './turma-uc.entity.js';
 
 @Entity('turma')
@@ -14,6 +15,9 @@ export class Turma {
 
   @Column({ name: 'id_opp', type: 'int', nullable: true })
   idOPP: number | null;
+
+  @Column({ name: 'id_area', type: 'int', nullable: true })
+  idArea: number | null;
 
   @Column({ type: 'varchar', length: 100 })
   nome: string;
@@ -46,6 +50,10 @@ export class Turma {
   @ManyToOne(() => OPP, (opp) => opp.turmas, { nullable: true })
   @JoinColumn({ name: 'id_opp' })
   opp: OPP | null;
+
+  @ManyToOne(() => Area, { nullable: true })
+  @JoinColumn({ name: 'id_area' })
+  area: Area | null;
 
   @OneToMany(() => TurmaUC, (tuc) => tuc.turma)
   turmaUCs: TurmaUC[];

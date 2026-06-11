@@ -128,6 +128,7 @@ export class TurmaService {
     const turma = await this.repo.create({
       idCriador: usuario.idUsuario,
       idOPP,
+      idArea: dados.idArea || null,
       nome: dados.nome.trim(),
       tipoCurso: dados.tipoCurso.toUpperCase(),
       dataInicio: new Date(dados.dataInicio),
@@ -166,6 +167,7 @@ export class TurmaService {
     if (dados.dataInicio) updateData.dataInicio = new Date(dados.dataInicio);
     if (dados.dataTermino) updateData.dataTermino = new Date(dados.dataTermino);
     if (dados.idOPP && usuario.funcao === 'gestor') updateData.idOPP = dados.idOPP;
+    if (dados.idArea !== undefined) updateData.idArea = dados.idArea;
     if (dados.descricao !== undefined) updateData.descricao = dados.descricao?.trim() || null;
 
     // Se mudou data ou horários, recalculamos aulasSemana e totalAulas
@@ -288,13 +290,18 @@ export class TurmaService {
 
   private mapTurmaParaCard(turma: Turma) {
     const grade = this.buildGrade(turma);
-    const areas = [
-      ...new Set(
-        turma.turmaUCs
-          ?.map((tuc) => tuc.unidadeCurricular?.area?.nome)
-          .filter(Boolean) as string[],
-      ),
-    ];
+    
+    // Se a turma tem a área definida diretamente, use apenas essa área.
+    // Caso contrário, (legado) pegue das UCs.
+    const areas = turma.area 
+      ? [turma.area.nome]
+      : [
+          ...new Set(
+            turma.turmaUCs
+              ?.map((tuc) => tuc.unidadeCurricular?.area?.nome)
+              .filter(Boolean) as string[],
+          ),
+        ];
 
     // Deduplica professores vinculados (um professor pode estar em vários slots)
     const profsMap = new Map<number, { idProfessor: number; nome: string; foto: string }>();
@@ -320,7 +327,7 @@ export class TurmaService {
     }
 
     const siglas = grade[0]?.periodo || 'N/D';
-    const idArea = turma.turmaUCs?.[0]?.unidadeCurricular?.idArea || null;
+    const idArea = turma.idArea || turma.turmaUCs?.[0]?.unidadeCurricular?.idArea || null;
 
     return {
       idTurma: turma.idTurma,
